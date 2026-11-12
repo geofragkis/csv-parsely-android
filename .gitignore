@@ -7,8 +7,3 @@
 .externalNativeBuild
 .cxx
 local.properties
-
-# OpenSpec / AI tooling
-/openspec/
-/.claude/
-/.github/
