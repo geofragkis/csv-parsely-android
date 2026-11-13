@@ -40,7 +40,11 @@ The system SHALL fail with an insufficient-storage error, without writing anythi
 - **THEN** the download fails with an insufficient-storage error and the partial file is deleted
 
 ### Requirement: Report download failures by kind
-The system SHALL report a failed download as one of: no connection or other network failure, an unsuccessful HTTP status (including the status code), or insufficient storage.
+The system SHALL report a failed download as one of: no connection or other network failure, an unsuccessful HTTP status (including the status code), insufficient storage, or an unexpected error. A failure to write the file SHALL be reported as insufficient storage only when the storage is full; any other write failure SHALL be reported as an unexpected error.
+
+#### Scenario: Write fails for another reason
+- **WHEN** writing the file fails while the storage still has space (for example the cache directory was removed)
+- **THEN** the download fails with an unexpected error, not an insufficient-storage error, and no partial file remains
 
 #### Scenario: Server returns an error status
 - **WHEN** the server responds with status 404

@@ -48,15 +48,23 @@ The system SHALL accept CRLF, LF and CR as record terminators, and a final recor
 - **THEN** each record is read separately
 
 ### Requirement: Ignore byte order mark and blank lines
-The system SHALL ignore a UTF-8 byte order mark at the start of the file, and SHALL skip records that are completely empty lines.
+The system SHALL ignore a UTF-8 byte order mark at the start of the file. It SHALL skip completely empty lines when the header has more than one column. When the header has one column, an empty line SHALL be a row with an empty value. A line containing only `""` SHALL always be a row.
 
 #### Scenario: File starts with a BOM
 - **WHEN** the file starts with a UTF-8 BOM
 - **THEN** the first column name does not contain the BOM
 
 #### Scenario: Trailing blank lines
-- **WHEN** the file ends with several empty lines
+- **WHEN** a file with several columns ends with several empty lines
 - **THEN** no empty rows are produced
+
+#### Scenario: Blank line in a single-column file
+- **WHEN** the header is `note` and the rows are `a`, an empty line and `b`
+- **THEN** the result has three rows, the second with an empty value
+
+#### Scenario: Quoted empty value on its own line
+- **WHEN** a file with several columns contains a line with only `""`
+- **THEN** that line is a row whose first value is empty and whose other values are padded
 
 ### Requirement: Keep rows with an irregular field count
 The system SHALL pad a row with fewer fields than the header with empty values. A row with more fields SHALL keep the extra values, and the table SHALL get extra unnamed columns to hold them. The result SHALL report how many rows had an irregular field count.
