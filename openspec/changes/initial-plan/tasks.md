@@ -6,7 +6,7 @@
 - [x] 1.2 Create empty modules `:core:domain` (JVM), `:core:data`, `:core:design-system`, `:feature:csv-viewer` with only their build files, wire them in `settings.gradle.kts` with the dependency direction from design.md, and verify `./gradlew assembleDebug` succeeds and the skill's graph check reports no cycles
 - [x] 1.3 Add the Dependency Analysis Gradle Plugin (`com.autonomousapps.dependency-analysis`, a version that supports our AGP and Gradle), used during development only, and verify `./gradlew buildHealth` runs and produces a report
 - [x] 1.4 Raise `minSdk` to 26, remove the dependencies `buildHealth` reports as unused that stay unused once the modules have code, and verify `./gradlew buildHealth` reports only the expected leftovers of the empty modules (the links between modules and the Compose libraries from the convention plugin) and `./gradlew assembleDebug` succeeds
-- [ ] 1.5 Move the theme files from `:app` to `:core:design-system`, and verify the app builds and launches with the same theme
+- [x] 1.5 Move the theme files from `:app` to `:core:design-system`, and verify the app builds and launches with the same theme
 
 ## 2. Dependency injection
 

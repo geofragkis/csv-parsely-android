@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.ui.theme
+package gio.frag.csvparsely.core.design_system.theme
 
 import android.app.Activity
 import android.os.Build
