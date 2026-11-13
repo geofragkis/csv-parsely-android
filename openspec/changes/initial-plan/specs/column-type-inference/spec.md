@@ -7,7 +7,7 @@ Converts the raw text of every parsed column into a string, an integer or a date
 ## ADDED Requirements
 
 ### Requirement: One type per column
-The system SHALL give each column exactly one type: INTEGER, DATE or TEXT. The type SHALL be decided from all non-empty values in that column. Empty values SHALL NOT affect the decision and SHALL stay empty after conversion.
+The system SHALL give each column exactly one type: INTEGER, DATE or TEXT. The type SHALL be decided from all non-empty values in that column. A value that is empty or contains only whitespace SHALL count as empty: it SHALL NOT affect the decision, and SHALL become empty in INTEGER and DATE columns, while TEXT columns keep it unchanged.
 
 #### Scenario: Sample file columns
 - **WHEN** the sample file is parsed
@@ -16,6 +16,14 @@ The system SHALL give each column exactly one type: INTEGER, DATE or TEXT. The t
 #### Scenario: Empty values in an integer column
 - **WHEN** a column holds `5`, an empty value and `7`
 - **THEN** the column is INTEGER and the second value stays empty
+
+#### Scenario: Whitespace-only value in an integer column
+- **WHEN** a column holds `5`, a value of three spaces and `7`
+- **THEN** the column is INTEGER and the second value is empty
+
+#### Scenario: Whitespace-only value in a text column
+- **WHEN** a column holds `a`, a value of three spaces and `b`
+- **THEN** the column is TEXT and the second value is kept as three spaces
 
 #### Scenario: Column with only empty values
 - **WHEN** every value in a column is empty
@@ -41,7 +49,7 @@ The system SHALL type a column as INTEGER when every non-empty value, ignoring s
 - **THEN** the column is TEXT
 
 ### Requirement: Date columns
-The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 calendar date (`yyyy-MM-dd`) or an ISO-8601 local date-time (`yyyy-MM-ddTHH:mm[:ss[.fraction]]`). A date value SHALL keep its time of day when one is given.
+The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 calendar date (`yyyy-MM-dd`) or an ISO-8601 local date-time (`yyyy-MM-ddTHH:mm[:ss[.fraction]]`). A date value SHALL keep its time of day when one is given, and SHALL record whether the file gave a time at all, so a date-only value is never confused with a value at midnight.
 
 #### Scenario: Date-time values
 - **WHEN** a column holds `1978-01-02T00:00:00`
@@ -49,7 +57,7 @@ The system SHALL type a column as DATE when every non-empty value, ignoring surr
 
 #### Scenario: Date-only values
 - **WHEN** a column holds `2001-04-20`
-- **THEN** the column is DATE with the value 20 April 2001
+- **THEN** the column is DATE with the value 20 April 2001 and no time
 
 #### Scenario: Invalid calendar date
 - **WHEN** a column holds `2023-02-30`

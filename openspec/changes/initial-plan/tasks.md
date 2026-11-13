@@ -15,16 +15,16 @@
 
 - [ ] 3.1 Add the domain models (`RawCsv`, `CsvTable`, `Column`, `ColumnType`, `CellValue`), `CsvError` and the `CsvRepository` interface in `:core:domain`, and verify `./gradlew :core:domain:build` succeeds
 - [ ] 3.2 Implement `ColumnTypeInference` with unit tests for every `column-type-inference` scenario plus Long min/max, whitespace and leap-day edges, and verify `./gradlew :core:domain:test` passes
-- [ ] 3.3 Implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher) with unit tests using a fake repository for success and error propagation, and verify `./gradlew :core:domain:test` passes
+- [ ] 3.3 Implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher, `try`/`catch` that rethrows `CancellationException` and wraps unknown exceptions in `CsvError.Unknown`) with unit tests using a fake repository for success, `CsvError` passed on, unknown exception → `Unknown`, and cancellation rethrown, and verify `./gradlew :core:domain:test` passes
 
 ## 4. Download
 
 - [ ] 4.1 Add OkHttp, the `INTERNET` permission and `NetworkModule`, and verify the app builds
-- [ ] 4.2 Implement `CsvDownloader` (temp file, storage check, separate read/write error handling, cleanup, atomic rename) with MockWebServer unit tests for every `csv-download` scenario, and verify `./gradlew :core:data:testDebugUnitTest` passes
+- [ ] 4.2 Implement `CsvDownloader` (temp file, storage check, separate read/write error handling with ENOSPC detection, cleanup, atomic rename) with MockWebServer unit tests for every `csv-download` scenario, including cancellation mid-copy, disk full while writing and another write failure, and verify `./gradlew :core:data:testDebugUnitTest` passes
 
 ## 5. CSV parser and repository
 
-- [ ] 5.1 Implement `CsvParser` (state machine over a `Reader`) with unit tests for every `csv-parsing` scenario, and verify `./gradlew :core:data:testDebugUnitTest` passes
+- [ ] 5.1 Before writing code, discuss the memory open question in design.md with the user. Then implement `CsvParser` (state machine over a `Reader`) with unit tests for every `csv-parsing` scenario, and verify `./gradlew :core:data:testDebugUnitTest` passes
 - [ ] 5.2 Open the file with a strict UTF-8 decoder (`CodingErrorAction.REPORT`) and map `MalformedInputException` to `CsvError.UnsupportedEncoding`, with tests for UTF-8 `Daniëlle` (parsed) and Windows-1252 `Daniëlle` (rejected), and verify the parser tests pass
 - [ ] 5.3 Add adversarial parser tests (quote inside an unquoted field, text after a closing quote, mixed line endings, Unicode/emoji, very long field, 100,000 generated rows within a time bound), fix any failures, and verify all parser tests pass
 - [ ] 5.4 Implement `CsvRepositoryImpl` (download, then parse on the IO dispatcher) and bind it in `DataModule` with the CSV URL and cache directory, and verify the app builds
@@ -32,9 +32,9 @@
 
 ## 6. Viewer screen
 
-- [ ] 6.1 Implement `CsvUiState`, `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, the error effect for each `CsvError` (with Retry offered for every kind except `UnsupportedEncoding`), the irregular-row effect and Retry, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
-- [ ] 6.2 Implement the stateless `CsvViewerContent` (loading indicator, `LazyColumn` of cards keyed by row index, value formatting, `Column <n>` labels, no-rows message) with string resources, and Compose UI tests for each `csv-viewer` display scenario, and verify `./gradlew :feature:csv-viewer:connectedDebugAndroidTest` passes
-- [ ] 6.3 Add the app-level `Scaffold` with the global `SnackbarHost`, connect `CsvViewerScreen` (state collection, effects → snackbar with Retry), and verify on a device: the sample's three cards appear, airplane mode shows the no-connection snackbar, and Retry recovers after reconnecting
+- [ ] 6.1 Implement `CsvUiState` (with `Failed(error, canRetry)`), `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry accepted only in `Failed`, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, `canRetry` for each `CsvError` (true for Network and HTTP 401/403/408/429/5xx; false for InsufficientStorage, Malformed, EmptyFile, UnsupportedEncoding, other 4xx, Unknown), the error and irregular-row effects, Retry from `Failed`, and Retry ignored while loading, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
+- [ ] 6.2 Implement the stateless `CsvViewerContent` (loading indicator, `LazyColumn` of cards keyed by row index, value formatting, `Column <n>` labels, no-rows message, error message with a Retry button when `canRetry`) with string resources, and Compose UI tests for each `csv-viewer` display scenario, and verify `./gradlew :feature:csv-viewer:connectedDebugAndroidTest` passes
+- [ ] 6.3 Add the app-level `Scaffold` with the global `SnackbarHost`, connect `CsvViewerScreen` (state collection, effects → snackbar), lock `MainActivity` to portrait, and verify on a device: the sample's three cards appear, airplane mode shows the no-connection message with Retry plus a snackbar, switching dark mode keeps the error screen, and Retry recovers after reconnecting
 
 ## 7. Final checks
 
@@ -46,4 +46,4 @@
 - Review the implementation against the specs, then archive the change with `/opsx:archive`.
 - Nice to have, each as its own OpenSpec change after this one is archived (each changes the specs):
   - Multi-format date detection: one format per column picked from common patterns (`dd-MM-yyyy`, `dd/MM/yyyy`, `MM/dd/yyyy`, `dd.MM.yyyy`, `yyyy/MM/dd`, ISO with an offset, each with an optional time), strict resolving, day-first as the tie-breaker.
-  - Windows-1252 fallback: when strict UTF-8 decoding fails, parse the file again as Windows-1252. This removes the unsupported-encoding error and its snackbar.
+  - Windows-1252 fallback, started by the user: the unsupported-encoding error screen gets a button that parses the already downloaded file again as Windows-1252 (no new download).
