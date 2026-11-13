@@ -3,7 +3,7 @@
 ## 1. Module structure and build setup
 
 - [x] 1.1 Create `:build-logic` with convention plugins (Android application, Android library, Compose, Hilt, JVM library) using the android-project-structure skill, and verify `./gradlew help` configures without errors
-- [ ] 1.2 Create empty modules `:core:domain` (JVM), `:core:data`, `:core:design-system`, `:feature:csv-viewer` with only their build files, wire them in `settings.gradle.kts` with the dependency direction from design.md, and verify `./gradlew assembleDebug` succeeds and the skill's graph check reports no cycles
+- [x] 1.2 Create empty modules `:core:domain` (JVM), `:core:data`, `:core:design-system`, `:feature:csv-viewer` with only their build files, wire them in `settings.gradle.kts` with the dependency direction from design.md, and verify `./gradlew assembleDebug` succeeds and the skill's graph check reports no cycles
 - [ ] 1.3 Raise `minSdk` to 26, remove template dependencies that nothing uses, and verify `./gradlew assembleDebug` succeeds
 - [ ] 1.4 Move the theme files from `:app` to `:core:design-system`, and verify the app builds and launches with the same theme
 
