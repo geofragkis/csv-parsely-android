@@ -1,4 +1,7 @@
+@file:Suppress("UnstableApiUsage")
+
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -23,4 +26,11 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "CsvParsely"
+// Lets modules reference each other as `projects.core.domain` instead of `project(":core:domain")`.
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 include(":app")
+include(":core:domain")
+include(":core:data")
+include(":core:design-system")
+include(":feature:csv-viewer")

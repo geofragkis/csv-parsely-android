@@ -147,6 +147,7 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 ## Open Questions
 
 - Memory use of parsing and type inference (see the first risk above). To be discussed again with the user before implementing the parser (task 5.1): whether the brief raw + typed peak is acceptable, or whether rows should be converted in a way that avoids holding both copies. The specs don't change either way.
+- Snackbar for errors: keep the `ShowError` effect (a short snackbar that repeats the error already shown in the `Failed` state), or use the snackbar only for the irregular-rows warning (`ShowIrregularRows`). Also reword "error screen" in the specs to "the error state of the screen", since it is not a separate screen. To be settled with the user before task 6.1. The specs and tasks keep `ShowError` until then.
 - [A validation file uses `;` or dates in another format] → Its columns are shown as TEXT, so data still displays but less precisely. The decision is written down in the specs and can be extended in one place (multi-format date detection is a listed follow-up).
 - [A validation file is a Windows-1252 Excel export] → It's rejected with a clear unsupported-encoding message, not shown with corrupted characters. A Windows-1252 fallback is a listed follow-up.
 - [`getAllocatableBytes` may free cache to make room, or the server sends no `Content-Length`] → The write-side check (a disk-full exception gives `InsufficientStorage` and the partial file is deleted) covers both.
