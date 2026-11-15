@@ -10,13 +10,13 @@
 
 ## 2. Dependency injection
 
-- [ ] 2.1 Add Hilt + KSP to the catalog and convention plugin, annotate the `Application` and `MainActivity`, add `DispatchersModule` with `@IoDispatcher`/`@DefaultDispatcher` (qualifiers in `:core:domain`), and verify the app builds and launches
+- [ ] 2.1 Add Hilt + KSP to the catalog and convention plugin, annotate the `Application` and `MainActivity`, and verify the app builds and launches
 
 ## 3. Domain models and type inference
 
 - [ ] 3.1 Add the domain models (`RawCsv`, `CsvTable`, `Column`, `ColumnType`, `CellValue`), `CsvError` and the `CsvRepository` interface in `:core:domain`, and verify `./gradlew :core:domain:build` succeeds
 - [ ] 3.2 Implement `ColumnTypeInference` with unit tests for every `column-type-inference` scenario plus Long min/max, whitespace and leap-day edges, and verify `./gradlew :core:domain:test` passes
-- [ ] 3.3 Implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher, `try`/`catch` that rethrows `CancellationException` and wraps unknown exceptions in `CsvError.Unknown`) with unit tests using a fake repository for success, `CsvError` passed on, unknown exception → `Unknown`, and cancellation rethrown, and verify `./gradlew :core:domain:test` passes
+- [ ] 3.3 Add the `@DefaultDispatcher` qualifier in `:core:domain` and `DispatchersModule` in `:core:data` providing it, then implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher, `try`/`catch` that rethrows `CancellationException` and wraps unknown exceptions in `CsvError.Unknown`) with unit tests using a fake repository for success, `CsvError` passed on, unknown exception → `Unknown`, and cancellation rethrown, and verify `./gradlew :core:domain:test` passes
 
 ## 4. Download
 
@@ -28,7 +28,7 @@
 - [ ] 5.1 Before writing code, discuss the memory open question in design.md with the user. Then implement `CsvParser` (state machine over a `Reader`) with unit tests for every `csv-parsing` scenario, and verify `./gradlew :core:data:testDebugUnitTest` passes
 - [ ] 5.2 Open the file with a strict UTF-8 decoder (`CodingErrorAction.REPORT`) and map `MalformedInputException` to `CsvError.UnsupportedEncoding`, with tests for UTF-8 `Daniëlle` (parsed) and Windows-1252 `Daniëlle` (rejected), and verify the parser tests pass
 - [ ] 5.3 Add adversarial parser tests (quote inside an unquoted field, text after a closing quote, mixed line endings, Unicode/emoji, very long field, 100,000 generated rows within a time bound), fix any failures, and verify all parser tests pass
-- [ ] 5.4 Implement `CsvRepositoryImpl` (download, then parse on the IO dispatcher) and bind it in `DataModule` with the CSV URL and cache directory, and verify the app builds
+- [ ] 5.4 Add the `@IoDispatcher` qualifier in `:core:domain` and its provider in `DispatchersModule`, then implement `CsvRepositoryImpl` (download, then parse on the IO dispatcher) and bind it in `DataModule` with the CSV URL and cache directory, and verify the app builds
 - [ ] 5.5 Add a JVM integration test serving the sample file's exact bytes from MockWebServer through repository and use case, asserting the typed `CsvTable` (column types and values), and verify it passes
 
 ## 6. Viewer screen

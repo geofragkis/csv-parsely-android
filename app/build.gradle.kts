@@ -1,6 +1,7 @@
 plugins {
     id("csvparsely.android-application")
     id("csvparsely.compose")
+    id("csvparsely.hilt")
 }
 
 android {

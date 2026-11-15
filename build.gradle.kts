@@ -5,8 +5,10 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.hilt) apply false
     // Development only: `./gradlew buildHealth` reports unused or wrongly declared dependencies.
-    alias(libs.plugins.dependency.analysis)
+    alias(libs.plugins.dependency.analysis) apply false
 }
 
 // Development only: the Dependency Analysis plugin must also be applied to every module it analyzes. Applying it from
