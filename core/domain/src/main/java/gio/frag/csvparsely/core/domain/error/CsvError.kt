@@ -30,5 +30,7 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
     ) : CsvError(cause)
 
     /** Anything we did not expect. The original exception is kept as the [cause]. */
-    data class Unknown(override val cause: Throwable) : CsvError(cause)
+    data class Unknown(
+        override val cause: Throwable
+    ) : CsvError(cause)
 }
