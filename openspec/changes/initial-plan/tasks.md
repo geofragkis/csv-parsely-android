@@ -10,11 +10,11 @@
 
 ## 2. Dependency injection
 
-- [ ] 2.1 Add Hilt + KSP to the catalog and convention plugin, annotate the `Application` and `MainActivity`, and verify the app builds and launches
+- [x] 2.1 Add Hilt + KSP to the catalog and convention plugin, annotate the `Application` and `MainActivity`, and verify the app builds and launches
 
 ## 3. Domain models and type inference
 
-- [ ] 3.1 Add the domain models (`RawCsv`, `CsvTable`, `Column`, `ColumnType`, `CellValue`), `CsvError` and the `CsvRepository` interface in `:core:domain`, and verify `./gradlew :core:domain:build` succeeds
+- [x] 3.1 Add the domain models (`RawCsv`, `CsvTable`, `Column`, `ColumnType`, `CellValue`), `CsvError` and the `CsvRepository` interface in `:core:domain`, and verify `./gradlew :core:domain:build` succeeds
 - [ ] 3.2 Implement `ColumnTypeInference` with unit tests for every `column-type-inference` scenario plus Long min/max, whitespace and leap-day edges, and verify `./gradlew :core:domain:test` passes
 - [ ] 3.3 Add the `@DefaultDispatcher` qualifier in `:core:domain` and `DispatchersModule` in `:core:data` providing it, then implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher, `try`/`catch` that rethrows `CancellationException` and wraps unknown exceptions in `CsvError.Unknown`) with unit tests using a fake repository for success, `CsvError` passed on, unknown exception → `Unknown`, and cancellation rethrown, and verify `./gradlew :core:domain:test` passes
 
