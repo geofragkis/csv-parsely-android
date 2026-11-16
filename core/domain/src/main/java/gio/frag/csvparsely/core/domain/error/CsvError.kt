@@ -1,7 +1,8 @@
 package gio.frag.csvparsely.core.domain.error
 
 /**
- * Every way loading the CSV can fail. It travels inside a `Result`, and the screen shows a message for each kind.
+ * Every way loading the CSV can fail. The repository throws it, the use case passes it on inside a `Result`, and the
+ * screen shows a message for each kind.
  */
 sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
 

@@ -36,7 +36,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 | Module | Type | Holds |
 |---|---|---|
 | `:build-logic` | included build | convention plugins: Android application, Android library, Compose, Hilt, JVM library |
-| `:core:domain` | pure Kotlin/JVM | models (`CsvTable`, `Column`, `ColumnType`, `CellValue`, `RawCsv`), `CsvError`, `CsvRepository` interface, `ColumnTypeInference`, `LoadCsvTableUseCase`, dispatcher qualifiers |
+| `:core:domain` | pure Kotlin/JVM | models (`CsvTable`, `Column`, `ColumnType`, `CellValue`, `RawCsv`), `CsvError`, `CsvRepository` interface, `RawCsv.toCsvTable()`, `LoadCsvTableUseCase`, dispatcher qualifiers |
 | `:core:data` | Android library | `CsvDownloader` (OkHttp), `CsvParser`, `CsvRepositoryImpl`, Hilt modules |
 | `:core:design-system` | Android library | theme (moved from `:app`) |
 | `:feature:csv-viewer` | Android library | `CsvViewerViewModel`, UI state/event/effect types, screen composables, string resources |
@@ -74,7 +74,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 - A BOM is removed if it's the first character. A completely empty line (no characters, not even `""`) is skipped when the header has more than one column. In a single-column file it is a row with one empty value. The state machine tracks whether the record contained any character, so `""` is never mistaken for an empty line.
 - EOF while in `IN_QUOTES` gives `CsvError.Malformed(line)`, using the line where the quote opened.
 - No records at all gives `CsvError.EmptyFile`.
-- Records are produced one at a time (an internal `Sequence`). The header is the first record. Rows are padded or kept wider as the spec describes, and `irregularRowCount` is counted along the way.
+- Records are produced one at a time (an internal `Sequence`). The header is the first record. Rows are padded or kept wider as the spec describes.
 - One `StringBuilder` is reused per field, so no per-character allocation.
 - The repository opens the file with a UTF-8 decoder set to `CodingErrorAction.REPORT` (not the default `REPLACE`). Invalid bytes throw a `MalformedInputException` during parsing, which becomes `CsvError.UnsupportedEncoding`. The check happens during the one parsing pass, so there's no extra pass over the file. *Alternative:* fall back to Windows-1252. This is kept as a possible follow-up; for now we prefer a clear error to guessing.
 
@@ -82,13 +82,15 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 ### Type inference is domain logic in the use case
 
-`CsvRepository.load(): RawCsv` (download + parse, on the IO dispatcher). `LoadCsvTableUseCase` calls it, then `ColumnTypeInference` (on the default dispatcher) does one pass per column to pick the type and a second pass to convert. The result is `Result<CsvTable>`.
+`CsvRepository.load(): RawCsv` (download + parse, on the IO dispatcher). `LoadCsvTableUseCase` calls it, then `RawCsv.toCsvTable()` (on the default dispatcher) does one pass per column to pick the type and a second pass to convert. The result is `Result<CsvTable>`.
 
 - INTEGER: trimmed, `^[+-]?(0|[1-9][0-9]*)$` and `toLongOrNull() != null`.
-- DATE: trimmed, `LocalDate.parse` or `LocalDateTime.parse` (ISO). A cell keeps what the file gave: a date-time stays a date-time (midnight included), and a date-only value has no time.
+- DATE: trimmed, `LocalDate.parse` or `LocalDateTime.parse` with strict ISO formatters: a four-digit year from 0001 with no sign, an uppercase `T` before the time, and dates or times that don't exist (`2023-02-30`, `24:00`) rejected instead of adjusted. A cell keeps what the file gave: a date-time stays a date-time (midnight included), and a date-only value has no time.
 - Otherwise TEXT, keeping the raw string.
 
 `CellValue` is a sealed interface: `Text(String)`, `Integer(Long)`, `Date(date: LocalDate, time: LocalTime?)`, `Empty`. `time == null` means the file gave only a date, which keeps a date-only value apart from a real midnight.
+
+Dates are shown as written and never converted to the user's time zone. The file does not say whether a value is a calendar date (such as a date of birth) or a moment in time, and converting a calendar date can shift it by a day. Date-times with an offset are typed as TEXT.
 
 The use case contains real logic (the conversion the brief asks for), so it's more than a call passed through to the repository. *Alternative:* infer inside the parser. That mixes tokenising with a business rule and makes both harder to test.
 
@@ -110,7 +112,7 @@ The use case builds the `Result` with a `try`/`catch`, not with `runCatching`: `
 - `CsvUiState`: `Loading`, `Loaded(columns, rows)`, `NoRows`, `Failed(error, canRetry)`. The error message and the Retry button are part of the state, so they survive any configuration change (the Activity, and with it the `SnackbarHostState`, is recreated, but the ViewModel is not).
 - `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`InsufficientStorage`, `Malformed`, `EmptyFile`, `UnsupportedEncoding`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
 - `CsvEvent`: `Retry`. The ViewModel ignores it unless the state is `Failed`, so a second download can never start while one is running.
-- `CsvEffect`: `ShowError(kind)` (short, no action: it announces the failure, while the screen holds the message and the Retry button), `ShowIrregularRows(count)` (short).
+- `CsvEffect`: `ShowError(kind)` (short, no action: it announces the failure, while the screen holds the message and the Retry button).
 - The ViewModel loads in `init`, so a configuration change doesn't reload. Effects go through a `Channel`, so a snackbar is delivered once and not replayed.
 - The app is locked to portrait (`android:screenOrientation="portrait"`). Since Android 16 (we target 37) the platform ignores this on large screens (smallest width ≥ 600dp), so the layout must still work in landscape there. Other configuration changes (dark mode, locale, font size) can happen on any device, which is why the state-based error screen is needed anyway.
 - The screen collects state with `collectAsStateWithLifecycle` and effects in a `LaunchedEffect`. A stateless `CsvViewerContent(state)` holds all rendering so UI tests don't need Hilt.
@@ -133,21 +135,21 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 | Layer | Test type | What |
 |---|---|---|
 | `CsvParser` | JVM unit | every scenario in `csv-parsing` (including UTF-8 vs Windows-1252 bytes), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
-| `ColumnTypeInference` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day |
+| `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day |
 | `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection leaves no file, declared size too big, cancellation mid-copy leaves no file, disk full while writing (ENOSPC from a failing sink) gives `InsufficientStorage`, other write failure gives `Unknown` |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
 | `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
-| `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, irregular-row effect, Retry from `Failed`, Retry ignored while loading |
+| `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, Retry from `Failed`, Retry ignored while loading |
 | `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, unnamed column label, no-rows message, error message with and without Retry button |
 
 ## Risks / Trade-offs
 
-- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `ColumnTypeInference` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is roughly twice the table. This is noted as a known limit; pagination or a database would be the next step.
+- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `RawCsv.toCsvTable()` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is roughly twice the table. This is noted as a known limit; pagination or a database would be the next step.
 
 ## Open Questions
 
 - Memory use of parsing and type inference (see the first risk above). To be discussed again with the user before implementing the parser (task 5.1): whether the brief raw + typed peak is acceptable, or whether rows should be converted in a way that avoids holding both copies. The specs don't change either way.
-- Snackbar for errors: keep the `ShowError` effect (a short snackbar that repeats the error already shown in the `Failed` state), or use the snackbar only for the irregular-rows warning (`ShowIrregularRows`). Also reword "error screen" in the specs to "the error state of the screen", since it is not a separate screen. To be settled with the user before task 6.1. The specs and tasks keep `ShowError` until then.
+- Snackbar for errors: keep the `ShowError` effect (a short snackbar that repeats the error already shown in the `Failed` state), or drop the snackbar and rely on the `Failed` state alone. Also reword "error screen" in the specs to "the error state of the screen", since it is not a separate screen. To be settled with the user before task 6.1. The specs and tasks keep `ShowError` until then.
 - [A validation file uses `;` or dates in another format] → Its columns are shown as TEXT, so data still displays but less precisely. The decision is written down in the specs and can be extended in one place (multi-format date detection is a listed follow-up).
 - [A validation file is a Windows-1252 Excel export] → It's rejected with a clear unsupported-encoding message, not shown with corrupted characters. A Windows-1252 fallback is a listed follow-up.
 - [`getAllocatableBytes` may free cache to make room, or the server sends no `Content-Length`] → The write-side check (a disk-full exception gives `InsufficientStorage` and the partial file is deleted) covers both.

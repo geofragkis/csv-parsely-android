@@ -15,7 +15,7 @@
 ## 3. Domain models and type inference
 
 - [x] 3.1 Add the domain models (`RawCsv`, `CsvTable`, `Column`, `ColumnType`, `CellValue`), `CsvError` and the `CsvRepository` interface in `:core:domain`, and verify `./gradlew :core:domain:build` succeeds
-- [ ] 3.2 Implement `ColumnTypeInference` with unit tests for every `column-type-inference` scenario plus Long min/max, whitespace and leap-day edges, and verify `./gradlew :core:domain:test` passes
+- [x] 3.2 Implement `RawCsv.toCsvTable()` with unit tests for every `column-type-inference` scenario plus Long min/max, whitespace and leap-day edges, and verify `./gradlew :core:domain:test` passes
 - [ ] 3.3 Add the `@DefaultDispatcher` qualifier in `:core:domain` and `DispatchersModule` in `:core:data` providing it, then implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher, `try`/`catch` that rethrows `CancellationException` and wraps unknown exceptions in `CsvError.Unknown`) with unit tests using a fake repository for success, `CsvError` passed on, unknown exception → `Unknown`, and cancellation rethrown, and verify `./gradlew :core:domain:test` passes
 
 ## 4. Download
@@ -33,7 +33,7 @@
 
 ## 6. Viewer screen
 
-- [ ] 6.1 Before writing code, settle the snackbar open question in design.md with the user. Then implement `CsvUiState` (with `Failed(error, canRetry)`), `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry accepted only in `Failed`, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, `canRetry` for each `CsvError` (true for Network and HTTP 401/403/408/429/5xx; false for InsufficientStorage, Malformed, EmptyFile, UnsupportedEncoding, other 4xx, Unknown), the error and irregular-row effects, Retry from `Failed`, and Retry ignored while loading, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
+- [ ] 6.1 Before writing code, settle the snackbar open question in design.md with the user. Then implement `CsvUiState` (with `Failed(error, canRetry)`), `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry accepted only in `Failed`, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, `canRetry` for each `CsvError` (true for Network and HTTP 401/403/408/429/5xx; false for InsufficientStorage, Malformed, EmptyFile, UnsupportedEncoding, other 4xx, Unknown), the error effect, Retry from `Failed`, and Retry ignored while loading, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
 - [ ] 6.2 Implement the stateless `CsvViewerContent` (loading indicator, `LazyColumn` of cards keyed by row index, value formatting, `Column <n>` labels, no-rows message, error message with a Retry button when `canRetry`) with string resources, and Compose UI tests for each `csv-viewer` display scenario, and verify `./gradlew :feature:csv-viewer:connectedDebugAndroidTest` passes
 - [ ] 6.3 Add the app-level `Scaffold` with the global `SnackbarHost`, connect `CsvViewerScreen` (state collection, effects → snackbar), lock `MainActivity` to portrait, and verify on a device: the sample's three cards appear, airplane mode shows the no-connection message with Retry plus a snackbar, switching dark mode keeps the error screen, and Retry recovers after reconnecting
 
@@ -49,3 +49,6 @@
 - Nice to have, each as its own OpenSpec change after this one is archived (each changes the specs):
   - Multi-format date detection: one format per column picked from common patterns (`dd-MM-yyyy`, `dd/MM/yyyy`, `MM/dd/yyyy`, `dd.MM.yyyy`, `yyyy/MM/dd`, ISO with an offset, each with an optional time), strict resolving, day-first as the tie-breaker.
   - Windows-1252 fallback, started by the user: the unsupported-encoding error screen gets a button that parses the already downloaded file again as Windows-1252 (no new download).
+- To rethink, raised in code review of 3.2:
+  - Rows of the wrong width: `RawCsv` rejects a row whose size differs from the header with `require`, so a parser bug fails when the `RawCsv` is created instead of with an `IndexOutOfBoundsException` inside `toCsvTable()`. The use case would still report it as `CsvError.Unknown`; decide whether that is enough once the parser (5.1) exists.
+  - Parsing cost in `toCsvTable()`: every INTEGER and DATE cell is parsed twice (once to pick the column type, once to convert it, with `checkNotNull` relying on both passes agreeing), and every date-time value first fails the date-only parse with a thrown `DateTimeParseException`. Measured at about 150 ms for 100k date-time cells on the desktop JVM; revisit if loading a large file feels slow on a device.

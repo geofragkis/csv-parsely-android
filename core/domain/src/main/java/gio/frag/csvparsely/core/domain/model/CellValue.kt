@@ -16,6 +16,9 @@ sealed interface CellValue {
     /**
      * A value from an INTEGER column.
      *
+     * A [Long] rather than an [Int], so large whole numbers such as IDs or timestamps in milliseconds still count as
+     * integers instead of falling back to text.
+     *
      * @property value the whole number
      */
     data class Integer(val value: Long) : CellValue
