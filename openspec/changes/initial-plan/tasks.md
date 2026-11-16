@@ -49,3 +49,6 @@
 - Nice to have, each as its own OpenSpec change after this one is archived (each changes the specs):
   - Multi-format date detection: one format per column picked from common patterns (`dd-MM-yyyy`, `dd/MM/yyyy`, `MM/dd/yyyy`, `dd.MM.yyyy`, `yyyy/MM/dd`, ISO with an offset, each with an optional time), strict resolving, day-first as the tie-breaker.
   - Windows-1252 fallback, started by the user: the unsupported-encoding error screen gets a button that parses the already downloaded file again as Windows-1252 (no new download).
+- To rethink, raised in code review of 3.2:
+  - Rows of the wrong width: `RawCsv` rejects a row whose size differs from the header with `require`, so a parser bug fails when the `RawCsv` is created instead of with an `IndexOutOfBoundsException` inside `toCsvTable()`. The use case would still report it as `CsvError.Unknown`; decide whether that is enough once the parser (5.1) exists.
+  - Parsing cost in `toCsvTable()`: every INTEGER and DATE cell is parsed twice (once to pick the column type, once to convert it, with `checkNotNull` relying on both passes agreeing), and every date-time value first fails the date-only parse with a thrown `DateTimeParseException`. Measured at about 150 ms for 100k date-time cells on the desktop JVM; revisit if loading a large file feels slow on a device.

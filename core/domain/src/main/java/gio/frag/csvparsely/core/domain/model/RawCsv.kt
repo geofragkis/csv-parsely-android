@@ -14,4 +14,10 @@ data class RawCsv(
     val header: List<String>,
     val rows: List<List<String>>,
     val irregularRowCount: Int,
-)
+) {
+    init {
+        // The parser must pad every row to the size of the header, so this only fails when the parser
+        // has a bug. It exists for extra safety.
+        require(rows.all { row -> row.size == header.size }) { "Every row must have as many values as the header" }
+    }
+}
