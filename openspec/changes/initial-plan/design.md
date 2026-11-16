@@ -85,7 +85,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 `CsvRepository.load(): RawCsv` (download + parse, on the IO dispatcher). `LoadCsvTableUseCase` calls it, then `RawCsv.toCsvTable()` (on the default dispatcher) does one pass per column to pick the type and a second pass to convert. The result is `Result<CsvTable>`.
 
 - INTEGER: trimmed, `^[+-]?(0|[1-9][0-9]*)$` and `toLongOrNull() != null`.
-- DATE: trimmed, `LocalDate.parse` or `LocalDateTime.parse` with strict ISO formatters in `DateFormatter`: a four-digit year from 0001 with no sign, an uppercase `T` before the time, and dates or times that don't exist (`2023-02-30`, `24:00`) rejected instead of adjusted. A cell keeps what the file gave: a date-time stays a date-time (midnight included), and a date-only value has no time.
+- DATE: trimmed, `LocalDate.parse` or `LocalDateTime.parse` with strict ISO formatters: a four-digit year from 0001 with no sign, an uppercase `T` before the time, and dates or times that don't exist (`2023-02-30`, `24:00`) rejected instead of adjusted. A cell keeps what the file gave: a date-time stays a date-time (midnight included), and a date-only value has no time.
 - Otherwise TEXT, keeping the raw string.
 
 `CellValue` is a sealed interface: `Text(String)`, `Integer(Long)`, `Date(date: LocalDate, time: LocalTime?)`, `Empty`. `time == null` means the file gave only a date, which keeps a date-only value apart from a real midnight.

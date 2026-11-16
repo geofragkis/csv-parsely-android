@@ -1,8 +1,13 @@
-package gio.frag.csvparsely.core.domain.model
+package gio.frag.csvparsely.core.domain.util
 
+import gio.frag.csvparsely.core.domain.model.CellValue
 import gio.frag.csvparsely.core.domain.model.CellValue.Empty
 import gio.frag.csvparsely.core.domain.model.CellValue.Integer
 import gio.frag.csvparsely.core.domain.model.CellValue.Text
+import gio.frag.csvparsely.core.domain.model.Column
+import gio.frag.csvparsely.core.domain.model.ColumnType
+import gio.frag.csvparsely.core.domain.model.CsvTable
+import gio.frag.csvparsely.core.domain.model.RawCsv
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
