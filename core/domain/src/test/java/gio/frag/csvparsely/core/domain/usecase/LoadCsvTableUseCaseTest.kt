@@ -72,7 +72,7 @@ class LoadCsvTableUseCaseTest {
         LoadCsvTableUseCase(repository, StandardTestDispatcher(testScheduler))
 }
 
-/** A repository that runs [load] instead of downloading and parsing. */
-private class FakeCsvRepository(private val load: () -> RawCsv) : CsvRepository {
-    override suspend fun load(): RawCsv = load.invoke()
+/** A repository that runs [onLoad] instead of downloading and parsing. */
+private class FakeCsvRepository(private val onLoad: () -> RawCsv) : CsvRepository {
+    override suspend fun load(): RawCsv = onLoad()
 }
