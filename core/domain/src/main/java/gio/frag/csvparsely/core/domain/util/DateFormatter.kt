@@ -1,5 +1,6 @@
-package gio.frag.csvparsely.core.domain.model
+package gio.frag.csvparsely.core.domain.util
 
+import gio.frag.csvparsely.core.domain.model.CellValue
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

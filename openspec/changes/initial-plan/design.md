@@ -90,6 +90,8 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 `CellValue` is a sealed interface: `Text(String)`, `Integer(Long)`, `Date(date: LocalDate, time: LocalTime?)`, `Empty`. `time == null` means the file gave only a date, which keeps a date-only value apart from a real midnight.
 
+Dates are shown as written and never converted to the user's time zone. The file does not say whether a value is a calendar date (such as a date of birth) or a moment in time, and converting a calendar date can shift it by a day. Date-times with an offset are typed as TEXT.
+
 The use case contains real logic (the conversion the brief asks for), so it's more than a call passed through to the repository. *Alternative:* infer inside the parser. That mixes tokenising with a business rule and makes both harder to test.
 
 ### Errors
