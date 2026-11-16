@@ -92,12 +92,10 @@ fun RawCsv.toCsvTable(): CsvTable {
     //         [Text("Fiona"), Text("de Vries"), Integer(7), Date(1950-11-12, time = 00:00), Text("https://...png")],
     //         [Text("Petra"), Text("Boersma"), Integer(1), Date(2001-04-20, time = 00:00), Text("https://...png")],
     //     ],
-    //     irregularRowCount = 0,
     // )
     return CsvTable(
         columns = columns,
         rows = typedRows,
-        irregularRowCount = irregularRowCount,
     )
 }
 

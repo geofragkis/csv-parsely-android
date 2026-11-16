@@ -107,13 +107,6 @@ The system SHALL lock the screen to portrait orientation on devices where the pl
 - **WHEN** a phone is turned to landscape
 - **THEN** the screen stays in portrait
 
-### Requirement: Irregular rows are reported
-The system SHALL show a snackbar with the number of irregular rows when the file loaded but some rows had a different field count than the header. The rows SHALL still be shown.
-
-#### Scenario: Two irregular rows
-- **WHEN** a file with two irregular rows has loaded
-- **THEN** the rows are shown and a snackbar says 2 rows had a different number of fields than the header
-
 ### Requirement: Feedback is shown once
 The system SHALL show each snackbar message once. It SHALL NOT appear again after a configuration change.
 

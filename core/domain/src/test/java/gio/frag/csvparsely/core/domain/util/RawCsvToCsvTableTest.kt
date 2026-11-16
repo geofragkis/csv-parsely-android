@@ -439,7 +439,6 @@ class RawCsvToCsvTableTest {
                 listOf("Anna", "30", "2001-04-20", ""),
                 listOf("Bram", "", "1978-01-02T00:00:00", "extra"),
             ),
-            irregularRowCount = 1,
         ).toCsvTable()
         val expectedColumns = listOf(
             Column("name", ColumnType.TEXT),
@@ -451,11 +450,9 @@ class RawCsvToCsvTableTest {
             listOf(Text("Anna"), Integer(30), date(2001, 4, 20), Text("")),
             listOf(Text("Bram"), Empty, date(1978, 1, 2, LocalTime.MIDNIGHT), Text("extra")),
         )
-        val expectedIrregularRowCount = 1
 
         assertEquals(expectedColumns, table.columns)
         assertEquals(expectedRows, table.rows)
-        assertEquals(expectedIrregularRowCount, table.irregularRowCount)
     }
 
     @Test
@@ -463,7 +460,6 @@ class RawCsvToCsvTableTest {
         val table = RawCsv(
             header = listOf("a", "b"),
             rows = emptyList(),
-            irregularRowCount = 0
         ).toCsvTable()
         val expectedColumns = listOf(Column("a", ColumnType.TEXT), Column("b", ColumnType.TEXT))
         val expectedRows = emptyList<List<CellValue>>()
@@ -477,7 +473,6 @@ class RawCsvToCsvTableTest {
         RawCsv(
             header = listOf("value"),
             rows = values.map { listOf(it) },
-            irregularRowCount = 0,
         ).toCsvTable()
 
     private fun CsvTable.singleColumnTableType(): ColumnType = columns.single().type

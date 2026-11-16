@@ -67,11 +67,11 @@ The system SHALL ignore a UTF-8 byte order mark at the start of the file. It SHA
 - **THEN** that line is a row whose first value is empty and whose other values are padded
 
 ### Requirement: Keep rows with an irregular field count
-The system SHALL pad a row with fewer fields than the header with empty values. A row with more fields SHALL keep the extra values, and the table SHALL get extra unnamed columns to hold them. The result SHALL report how many rows had an irregular field count.
+The system SHALL pad a row with fewer fields than the header with empty values. A row with more fields SHALL keep the extra values, and the table SHALL get extra unnamed columns to hold them.
 
 #### Scenario: Short row
 - **WHEN** the header has three columns and a row has two fields
-- **THEN** the row has three values, the last one empty, and the irregular-row count is 1
+- **THEN** the row has three values, the last one empty
 
 #### Scenario: Long row
 - **WHEN** the header has two columns and a row has three fields

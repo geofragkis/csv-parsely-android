@@ -11,8 +11,8 @@ The app must download a CSV file from a remote URL and show its contents, with e
 - Download the CSV with OkHttp to a temporary file in the app's cache directory. Check free space first and never leave a partial file behind.
 - Add a hand-written CSV parser (no third-party CSV library) that streams the file row by row and handles quoted fields, escaped quotes, line breaks inside quotes, CRLF/LF/CR line endings, a UTF-8 BOM and a missing final newline. Files that are not valid UTF-8 are rejected with a clear error, never shown with corrupted characters.
 - Infer each column's type (TEXT, INTEGER or DATE) from its content and convert every cell to that type.
-- Keep rows whose field count differs from the header: pad short rows, keep extra fields as unnamed columns, and report how many rows were irregular.
-- Show the rows in a single screen: a `LazyColumn` of non-clickable cards, a loading indicator, and a snackbar for errors (with a Retry action) and for warnings about irregular rows.
+- Keep rows whose field count differs from the header: pad short rows and keep extra fields as unnamed columns.
+- Show the rows in a single screen: a `LazyColumn` of non-clickable cards, a loading indicator, and a snackbar for errors (with a Retry action).
 - Add unit tests (parser, type inference, download, ViewModel), a JVM integration test from HTTP to typed table, and Compose UI tests, written together with the code they cover.
 
 ## Capabilities

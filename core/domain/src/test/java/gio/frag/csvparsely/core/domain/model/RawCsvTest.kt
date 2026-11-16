@@ -11,7 +11,7 @@ class RawCsvTest {
         val rows = listOf(listOf("1"))
 
         assertFailsWith<IllegalArgumentException> {
-            RawCsv(header = header, rows = rows, irregularRowCount = 1)
+            RawCsv(header = header, rows = rows)
         }
     }
 
@@ -21,27 +21,7 @@ class RawCsvTest {
         val rows = listOf(listOf("1", "2", "3"))
 
         assertFailsWith<IllegalArgumentException> {
-            RawCsv(header = header, rows = rows, irregularRowCount = 1)
-        }
-    }
-
-    @Test
-    fun `negative irregular row count is rejected`() {
-        val header = listOf("a")
-        val rows = listOf(listOf("1"))
-
-        assertFailsWith<IllegalArgumentException> {
-            RawCsv(header = header, rows = rows, irregularRowCount = -1)
-        }
-    }
-
-    @Test
-    fun `irregular row count above the row count is rejected`() {
-        val header = listOf("a")
-        val rows = listOf(listOf("1"))
-
-        assertFailsWith<IllegalArgumentException> {
-            RawCsv(header = header, rows = rows, irregularRowCount = 2)
+            RawCsv(header = header, rows = rows)
         }
     }
 }
