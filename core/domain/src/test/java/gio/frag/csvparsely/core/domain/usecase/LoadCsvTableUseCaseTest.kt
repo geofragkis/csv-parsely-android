@@ -35,7 +35,7 @@ class LoadCsvTableUseCaseTest {
         )
         val useCase = useCase(FakeCsvRepository { rawCsv })
 
-        val result = useCase()
+        val result = useCase(CSV_URL)
 
         assertEquals(expectedTable, result.getOrThrow())
     }
@@ -45,7 +45,7 @@ class LoadCsvTableUseCaseTest {
         val error = CsvError.Http(404)
         val useCase = useCase(FakeCsvRepository { throw error })
 
-        val result = useCase()
+        val result = useCase(CSV_URL)
 
         assertSame(error, result.exceptionOrNull())
     }
@@ -55,7 +55,7 @@ class LoadCsvTableUseCaseTest {
         val exception = IllegalStateException("boom")
         val useCase = useCase(FakeCsvRepository { throw exception })
 
-        val result = useCase()
+        val result = useCase(CSV_URL)
 
         val error = assertIs<CsvError.Unknown>(result.exceptionOrNull())
         assertSame(exception, error.cause)
@@ -65,14 +65,16 @@ class LoadCsvTableUseCaseTest {
     fun `cancellation is rethrown instead of becoming a failure`() = runTest {
         val useCase = useCase(FakeCsvRepository { throw CancellationException("cancelled") })
 
-        assertFailsWith<CancellationException> { useCase() }
+        assertFailsWith<CancellationException> { useCase(CSV_URL) }
     }
 
     private fun TestScope.useCase(repository: CsvRepository) =
         LoadCsvTableUseCase(repository, StandardTestDispatcher(testScheduler))
 }
 
+private const val CSV_URL = "https://example.com/file.csv"
+
 /** A repository that runs [onLoad] instead of downloading and parsing. */
 private class FakeCsvRepository(private val onLoad: () -> RawCsv) : CsvRepository {
-    override suspend fun load(): RawCsv = onLoad()
+    override suspend fun load(url: String): RawCsv = onLoad()
 }

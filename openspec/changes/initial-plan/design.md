@@ -51,10 +51,9 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 `CsvDownloader` makes a GET request with OkHttp and writes the body to `cacheDir/csv/download.csv.tmp`, then renames it to `download.csv` once the body has been read completely. Steps:
 
 1. A non-2xx status gives `CsvError.Http(code)`. An `IOException` from the call gives `CsvError.Network`.
-2. If `Content-Length` is known, compare it with `StorageManager.getAllocatableBytes(...)` for the cache volume. If it's too large, fail with `CsvError.InsufficientStorage` before creating the file.
-3. Copy in a loop: read a chunk from the response source, then write it to the file sink. An exception on the read side is a network error. An exception on the write side is `InsufficientStorage` only when its cause chain contains an `ErrnoException` with `errno == OsConstants.ENOSPC`; any other write exception becomes `CsvError.Unknown`. Keeping the read and the write separate is what lets us tell "disk full" from "connection lost". `ensureActive()` runs between chunks so cancellation stops the copy.
-4. On any failure or cancellation, delete the `.tmp` file. On success, rename it over the final file.
-5. Only one download runs at a time, because the ViewModel accepts Retry only in the `Failed` state (see UI). So a fixed `.tmp` name is safe.
+2. Copy in a loop: read a chunk from the response source, then write it to the file sink. An exception on the read side is a network error. An exception on the write side is `InsufficientStorage` only when its cause chain contains an `ErrnoException` with `errno == OsConstants.ENOSPC`; any other write exception becomes `CsvError.Unknown`. Keeping the read and the write separate is what lets us tell "disk full" from "connection lost". `ensureActive()` runs between chunks so cancellation stops the copy.
+3. On any failure or cancellation, delete the `.tmp` file. On success, rename it over the final file.
+4. Only one download runs at a time, because the ViewModel accepts Retry only in the `Failed` state (see UI). So a fixed `.tmp` name is safe.
 
 *Alternatives:* stream straight into the parser (no disk, but a literal reading of "the application must download the file" asks for a file, and the parser would be coupled to the network); Retrofit (adds nothing for one GET of a raw file).
 
@@ -96,9 +95,9 @@ The use case contains real logic (the conversion the brief asks for), so it's mo
 
 ### Errors
 
-`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `InsufficientStorage`, `EmptyFile`, `Malformed(line)`, `UnsupportedEncoding`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
+`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `InsufficientStorage`, `EmptyFile`, `Malformed(line)`, `UnsupportedEncoding`, `FileTooLarge`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
 
-The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` on a file too large for memory becomes `CsvError.Unknown` instead of a crash. The memory taken by the failed load is freed once the load fails, so the app can keep running.
+The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` becomes `CsvError.FileTooLarge` instead of a crash. Loading the file is by far the largest use of memory in the app, so a file too large to hold is the likely cause; `InsufficientStorage` is not used for it, because that would send the user to free disk space, which doesn't help. The memory taken by the failed load is freed once the load fails, so the app can keep running.
 
 ### UI: MVVM with unidirectional data flow, no reducers
 
@@ -110,7 +109,7 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 ```
 
 - `CsvUiState`: `Loading`, `Loaded(columns, rows)`, `NoRows`, `Failed(error, canRetry)`. The error message and the Retry button are part of the state, so they survive any configuration change (the Activity, and with it the `SnackbarHostState`, is recreated, but the ViewModel is not).
-- `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`InsufficientStorage`, `Malformed`, `EmptyFile`, `UnsupportedEncoding`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
+- `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`InsufficientStorage`, `Malformed`, `EmptyFile`, `UnsupportedEncoding`, `FileTooLarge`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
 - `CsvEvent`: `Retry`. The ViewModel ignores it unless the state is `Failed`, so a second download can never start while one is running.
 - `CsvEffect`: `ShowError(kind)` (short, no action: it announces the failure, while the screen holds the message and the Retry button).
 - The ViewModel loads in `init`, so a configuration change doesn't reload. Effects go through a `Channel`, so a snackbar is delivered once and not replayed.
@@ -127,7 +126,7 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 
 ### Build changes
 
-- `minSdk` 26 so `java.time` and `StorageManager.getAllocatableBytes` are available without desugaring. That still covers practically all active devices.
+- `minSdk` 26 so `java.time` is available without desugaring. That still covers practically all active devices.
 - Remove unused template dependencies (e.g. espresso if no test uses it), in line with "only necessary dependencies".
 
 ### Testing
@@ -136,15 +135,15 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 |---|---|---|
 | `CsvParser` | JVM unit | every scenario in `csv-parsing` (including UTF-8 vs Windows-1252 bytes), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
 | `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day |
-| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection leaves no file, declared size too big, cancellation mid-copy leaves no file, disk full while writing (ENOSPC from a failing sink) gives `InsufficientStorage`, other write failure gives `Unknown` |
+| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection leaves no file, cancellation mid-copy leaves no file, disk full while writing (ENOSPC from a failing sink) gives `InsufficientStorage`, other write failure gives `Unknown` |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
-| `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
+| `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
 | `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, Retry from `Failed`, Retry ignored while loading |
 | `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, unnamed column label, no-rows message, error message with and without Retry button |
 
 ## Risks / Trade-offs
 
-- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `RawCsv.toCsvTable()` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is roughly twice the table. This is noted as a known limit; pagination or a database would be the next step.
+- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `RawCsv.toCsvTable()` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is roughly twice the table. A file too large for memory fails with `FileTooLarge`, and this is noted as a known limit; pagination or a database would be the next step.
 
 ## Open Questions
 
@@ -152,6 +151,5 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 - Snackbar for errors: keep the `ShowError` effect (a short snackbar that repeats the error already shown in the `Failed` state), or drop the snackbar and rely on the `Failed` state alone. Also reword "error screen" in the specs to "the error state of the screen", since it is not a separate screen. To be settled with the user before task 6.1. The specs and tasks keep `ShowError` until then.
 - [A validation file uses `;` or dates in another format] → Its columns are shown as TEXT, so data still displays but less precisely. The decision is written down in the specs and can be extended in one place (multi-format date detection is a listed follow-up).
 - [A validation file is a Windows-1252 Excel export] → It's rejected with a clear unsupported-encoding message, not shown with corrupted characters. A Windows-1252 fallback is a listed follow-up.
-- [`getAllocatableBytes` may free cache to make room, or the server sends no `Content-Length`] → The write-side check (a disk-full exception gives `InsufficientStorage` and the partial file is deleted) covers both.
 - [Five modules for one screen] → Each module has a distinct responsibility, and the build-logic plugins keep each module's build file to a few lines.
 - [Raising `minSdk` from 24 to 26] → Drops Android 7.x devices, which are negligible today. It avoids enabling desugaring just for `java.time`.

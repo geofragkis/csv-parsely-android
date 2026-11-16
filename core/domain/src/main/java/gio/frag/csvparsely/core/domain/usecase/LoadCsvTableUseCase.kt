@@ -20,9 +20,9 @@ class LoadCsvTableUseCase @Inject constructor(
      * Returns the typed table, or a failure holding a [CsvError]. An unexpected exception becomes [CsvError.Unknown].
      * A canceled load is not a failure: its `CancellationException` is rethrown.
      */
-    suspend operator fun invoke(): Result<CsvTable> {
+    suspend operator fun invoke(url: String): Result<CsvTable> {
         return runCatching {
-            val rawCsv = repository.load()
+            val rawCsv = repository.load(url)
             // Typing goes over every cell, so it runs off the main thread
             withContext(defaultDispatcher) {
                 rawCsv.toCsvTable()

@@ -8,7 +8,7 @@ The app must download a CSV file from a remote URL and show its contents, with e
 
 - Split the single `:app` module into a multi-module clean architecture: `:build-logic` (convention plugins), `:core:domain`, `:core:data`, `:core:design-system`, `:feature:csv-viewer`, with `:app` as the entry point.
 - Add Hilt for dependency injection and raise `minSdk` from 24 to 26 so `java.time` is available for date values.
-- Download the CSV with OkHttp to a temporary file in the app's cache directory. Check free space first and never leave a partial file behind.
+- Download the CSV with OkHttp to a temporary file in the app's cache directory. Never leave a partial file behind, also when storage runs out.
 - Add a hand-written CSV parser (no third-party CSV library) that streams the file row by row and handles quoted fields, escaped quotes, line breaks inside quotes, CRLF/LF/CR line endings, a UTF-8 BOM and a missing final newline. Files that are not valid UTF-8 are rejected with a clear error, never shown with corrupted characters.
 - Infer each column's type (TEXT, INTEGER or DATE) from its content and convert every cell to that type.
 - Keep rows whose field count differs from the header: pad short rows and keep extra fields as unnamed columns.
@@ -18,7 +18,7 @@ The app must download a CSV file from a remote URL and show its contents, with e
 ## Capabilities
 
 ### New Capabilities
-- `csv-download`: fetching the remote CSV into a temporary local file, including storage checks and failure cleanup.
+- `csv-download`: fetching the remote CSV into a temporary local file, including running out of storage and failure cleanup.
 - `csv-parsing`: turning a CSV text stream into a header and rows of raw fields, including irregular-row handling.
 - `column-type-inference`: deciding each column's type (TEXT, INTEGER, DATE) and converting the cells to it.
 - `csv-viewer`: the screen that shows the typed table, its loading state and user feedback.
