@@ -36,7 +36,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 | Module | Type | Holds |
 |---|---|---|
 | `:build-logic` | included build | convention plugins: Android application, Android library, Compose, Hilt, JVM library |
-| `:core:domain` | pure Kotlin/JVM | models (`CsvTable`, `Column`, `ColumnType`, `CellValue`, `RawCsv`), `CsvError`, `CsvRepository` interface, `ColumnTypeInference`, `LoadCsvTableUseCase`, dispatcher qualifiers |
+| `:core:domain` | pure Kotlin/JVM | models (`CsvTable`, `Column`, `ColumnType`, `CellValue`, `RawCsv`), `CsvError`, `CsvRepository` interface, `RawCsv.toCsvTable()`, `LoadCsvTableUseCase`, dispatcher qualifiers |
 | `:core:data` | Android library | `CsvDownloader` (OkHttp), `CsvParser`, `CsvRepositoryImpl`, Hilt modules |
 | `:core:design-system` | Android library | theme (moved from `:app`) |
 | `:feature:csv-viewer` | Android library | `CsvViewerViewModel`, UI state/event/effect types, screen composables, string resources |
@@ -82,10 +82,10 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 ### Type inference is domain logic in the use case
 
-`CsvRepository.load(): RawCsv` (download + parse, on the IO dispatcher). `LoadCsvTableUseCase` calls it, then `ColumnTypeInference` (on the default dispatcher) does one pass per column to pick the type and a second pass to convert. The result is `Result<CsvTable>`.
+`CsvRepository.load(): RawCsv` (download + parse, on the IO dispatcher). `LoadCsvTableUseCase` calls it, then `RawCsv.toCsvTable()` (on the default dispatcher) does one pass per column to pick the type and a second pass to convert. The result is `Result<CsvTable>`.
 
 - INTEGER: trimmed, `^[+-]?(0|[1-9][0-9]*)$` and `toLongOrNull() != null`.
-- DATE: trimmed, `LocalDate.parse` or `LocalDateTime.parse` (ISO). A cell keeps what the file gave: a date-time stays a date-time (midnight included), and a date-only value has no time.
+- DATE: trimmed, `LocalDate.parse` or `LocalDateTime.parse` with strict ISO formatters in `DateFormatter`: a four-digit year from 0001 with no sign, an uppercase `T` before the time, and dates or times that don't exist (`2023-02-30`, `24:00`) rejected instead of adjusted. A cell keeps what the file gave: a date-time stays a date-time (midnight included), and a date-only value has no time.
 - Otherwise TEXT, keeping the raw string.
 
 `CellValue` is a sealed interface: `Text(String)`, `Integer(Long)`, `Date(date: LocalDate, time: LocalTime?)`, `Empty`. `time == null` means the file gave only a date, which keeps a date-only value apart from a real midnight.
@@ -135,7 +135,7 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 | Layer | Test type | What |
 |---|---|---|
 | `CsvParser` | JVM unit | every scenario in `csv-parsing` (including UTF-8 vs Windows-1252 bytes), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
-| `ColumnTypeInference` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day |
+| `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day |
 | `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection leaves no file, declared size too big, cancellation mid-copy leaves no file, disk full while writing (ENOSPC from a failing sink) gives `InsufficientStorage`, other write failure gives `Unknown` |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
 | `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
@@ -144,7 +144,7 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 
 ## Risks / Trade-offs
 
-- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `ColumnTypeInference` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is roughly twice the table. This is noted as a known limit; pagination or a database would be the next step.
+- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `RawCsv.toCsvTable()` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is roughly twice the table. This is noted as a known limit; pagination or a database would be the next step.
 
 ## Open Questions
 

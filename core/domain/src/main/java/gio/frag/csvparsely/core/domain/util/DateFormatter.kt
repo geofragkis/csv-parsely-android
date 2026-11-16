@@ -13,15 +13,19 @@ import java.time.temporal.ChronoField
 internal object DateFormatter {
 
     /**
-     * An ISO date with a four-digit year and no sign: `2001-04-20`, but not `+10000-01-01` or `-0001-01-01`.
-     * Unlike [DateTimeFormatter.ISO_LOCAL_DATE], which also accepts signed years and years with more than four digits.
+     * An ISO date with a four-digit year from 0001 and no sign: `2001-04-20`, but not `0000-01-01`, `+10000-01-01` or
+     * `-0001-01-01`. Unlike [DateTimeFormatter.ISO_LOCAL_DATE], which also accepts year 0000, signed years and years
+     * with more than four digits.
      */
     private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
-        .appendValue(ChronoField.YEAR, 4)
+        // The year counted from 1 AD, so 0000 is out of range instead of being read as 1 BC
+        .appendValue(ChronoField.YEAR_OF_ERA, 4)
         .appendLiteral('-')
         .appendValue(ChronoField.MONTH_OF_YEAR, 2)
         .appendLiteral('-')
         .appendValue(ChronoField.DAY_OF_MONTH, 2)
+        // The file gives no era, so every year is AD
+        .parseDefaulting(ChronoField.ERA, 1)
         .toFormatter()
         // Rejects dates that don't exist, such as 2023-02-30, instead of moving them to the last valid day, 2023-02-28
         .withResolverStyle(ResolverStyle.STRICT)

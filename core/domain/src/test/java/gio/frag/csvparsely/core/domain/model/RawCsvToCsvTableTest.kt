@@ -89,6 +89,16 @@ class RawCsvToCsvTableTest {
     }
 
     @Test
+    fun `surrounding non-breaking spaces are ignored for integers`() {
+        val table = singleColumnCSVTable(" 30 ", " ")
+        val expectedType = ColumnType.INTEGER
+        val expectedResult = listOf(Integer(30), Empty)
+
+        assertEquals(expectedType, table.singleColumnTableType())
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
     fun `signed zero is an integer`() {
         val table = singleColumnCSVTable("-0", "+0")
         val expectedType = ColumnType.INTEGER
@@ -318,6 +328,30 @@ class RawCsvToCsvTableTest {
                 "for \"$value\""
             )
         }
+    }
+
+    @Test
+    fun `year zero is text`() {
+        val values = listOf("0000-01-01", "0000-01-01T00:00:00")
+        val expectedType = ColumnType.TEXT
+
+        values.forEach { value ->
+            assertEquals(
+                expectedType,
+                singleColumnCSVTable(value).singleColumnTableType(),
+                "for \"$value\""
+            )
+        }
+    }
+
+    @Test
+    fun `year one is a date`() {
+        val table = singleColumnCSVTable("0001-01-01")
+        val expectedType = ColumnType.DATE
+        val expectedResult = listOf(date(1, 1, 1))
+
+        assertEquals(expectedType, table.singleColumnTableType())
+        assertEquals(expectedResult, table.cells())
     }
 
     @Test

@@ -59,7 +59,6 @@ fun RawCsv.toCsvTable(): CsvTable {
     )
 }
 
-
 /**
  * Decides the type of one column from its values. Empty and blank values are ignored, and a column with no other
  * values is TEXT.
