@@ -1,9 +1,5 @@
 package gio.frag.csvparsely.core.domain.model
 
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeParseException
-
 /** A whole number without leading zeros, optionally signed: `0`, `-3`, `+12`, but not `0123`. */
 private val INTEGER_PATTERN = Regex("[+-]?(0|[1-9][0-9]*)")
 
@@ -75,7 +71,7 @@ private fun columnType(values: List<String>): ColumnType {
     return when {
         nonEmptyValues.isEmpty() -> ColumnType.TEXT
         nonEmptyValues.all { it.toIntegerOrNull() != null } -> ColumnType.INTEGER
-        nonEmptyValues.all { it.toDateOrNull() != null } -> ColumnType.DATE
+        nonEmptyValues.all { DateFormatter.parseOrNull(it) != null } -> ColumnType.DATE
         else -> ColumnType.TEXT
     }
 }
@@ -93,7 +89,7 @@ private fun String.toCellValue(type: ColumnType): CellValue {
         type == ColumnType.TEXT -> CellValue.Text(this)
         trimmed.isEmpty() -> CellValue.Empty
         type == ColumnType.INTEGER -> CellValue.Integer(checkNotNull(trimmed.toIntegerOrNull()))
-        else -> checkNotNull(trimmed.toDateOrNull())
+        else -> checkNotNull(DateFormatter.parseOrNull(trimmed))
     }
 }
 
@@ -104,32 +100,3 @@ private fun String.toCellValue(type: ColumnType): CellValue {
  */
 private fun String.toIntegerOrNull(): Long? =
     if (INTEGER_PATTERN.matches(this)) toLongOrNull() else null
-
-/**
- * Reads an ISO date or date-time, or returns null. Tries a date first, then a date-time.
- *
- * For example: `"2001-04-20"` returns `Date(2001-04-20, time = null)`, `"1978-01-02T00:00:00"` returns
- * `Date(1978-01-02, time = 00:00)`, and `"2023-02-30"` returns null.
- */
-private fun String.toDateOrNull(): CellValue.Date? {
-    parseOrNull { LocalDate.parse(this) }?.let { date ->
-        return CellValue.Date(date, time = null)
-    }
-    parseOrNull { LocalDateTime.parse(this) }?.let { dateTime ->
-        return CellValue.Date(dateTime.toLocalDate(), dateTime.toLocalTime())
-    }
-    return null
-}
-
-/**
- * Runs [parse] and returns its result, or null when the text is not a valid date.
- *
- * For example: `parseOrNull { LocalDate.parse("2001-04-20") }` returns 2001-04-20, and with `"20-04-2001"` it returns
- * null.
- */
-private inline fun <T> parseOrNull(parse: () -> T): T? =
-    try {
-        parse()
-    } catch (e: DateTimeParseException) {
-        null
-    }
