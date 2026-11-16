@@ -284,6 +284,30 @@ class RawCsvToCsvTableTest {
     }
 
     @Test
+    fun `leap day in a leap year is a date`() {
+        val table = singleColumnCSVTable("2024-02-29", "2000-02-29")
+        val expectedType = ColumnType.DATE
+        val expectedResult = listOf(date(2024, 2, 29), date(2000, 2, 29))
+
+        assertEquals(expectedType, table.singleColumnTableType())
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
+    fun `leap day in a non-leap year is text`() {
+        val values = listOf("2023-02-29", "1900-02-29", "2023-02-29T10:15")
+        val expectedType = ColumnType.TEXT
+
+        values.forEach { value ->
+            assertEquals(
+                expectedType,
+                singleColumnCSVTable(value).singleColumnTableType(),
+                "for \"$value\""
+            )
+        }
+    }
+
+    @Test
     fun `invalid times are text`() {
         val values =
             listOf( "2001-04-20T24:00", "2001-04-20T23:60", "2001-04-20T23:59:60", "2001-04-20T10")
@@ -461,9 +485,10 @@ class RawCsvToCsvTableTest {
     private fun CsvTable.cells(): List<CellValue> = rows.map { it.single() }
 
     private fun date(
-        year: Int, month: Int,
-        day: Int, time:
-        LocalTime? = null
+        year: Int,
+        month: Int,
+        day: Int,
+        time: LocalTime? = null
     ) = CellValue.Date(
         LocalDate.of(year, month, day),
         time
