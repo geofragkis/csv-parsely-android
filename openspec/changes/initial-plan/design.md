@@ -98,7 +98,7 @@ The use case contains real logic (the conversion the brief asks for), so it's mo
 
 `CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `InsufficientStorage`, `EmptyFile`, `Malformed(line)`, `UnsupportedEncoding`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
 
-The use case builds the `Result` with a `try`/`catch`, not with `runCatching`: `CancellationException` is always rethrown, so a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error.
+The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` on a file too large for memory becomes `CsvError.Unknown` instead of a crash. The memory taken by the failed load is freed once the load fails, so the app can keep running.
 
 ### UI: MVVM with unidirectional data flow, no reducers
 
