@@ -30,6 +30,11 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
         override val cause: Throwable?
     ) : CsvError(cause)
 
+    /** The app ran out of memory while loading the file. The `OutOfMemoryError` is kept as the [cause]. */
+    data class FileTooLarge(
+        override val cause: Throwable
+    ) : CsvError(cause)
+
     /** Anything we did not expect. The original exception is kept as the [cause]. */
     data class Unknown(
         override val cause: Throwable

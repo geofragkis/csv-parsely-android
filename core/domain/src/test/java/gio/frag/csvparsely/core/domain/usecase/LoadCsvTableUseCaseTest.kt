@@ -51,6 +51,17 @@ class LoadCsvTableUseCaseTest {
     }
 
     @Test
+    fun `running out of memory becomes FileTooLarge with the original as cause`() = runTest {
+        val outOfMemory = OutOfMemoryError("too large")
+        val useCase = useCase(FakeCsvRepository { throw outOfMemory })
+
+        val result = useCase(CSV_URL)
+
+        val error = assertIs<CsvError.FileTooLarge>(result.exceptionOrNull())
+        assertSame(outOfMemory, error.cause)
+    }
+
+    @Test
     fun `an unknown exception becomes Unknown with the original as cause`() = runTest {
         val exception = IllegalStateException("boom")
         val useCase = useCase(FakeCsvRepository { throw exception })

@@ -17,7 +17,7 @@
 - [x] 3.1 Add the domain models (`RawCsv`, `CsvTable`, `Column`, `ColumnType`, `CellValue`), `CsvError` and the `CsvRepository` interface in `:core:domain`, and verify `./gradlew :core:domain:build` succeeds
 - [x] 3.2 Implement `RawCsv.toCsvTable()` with unit tests for every `column-type-inference` scenario plus Long min/max, whitespace and leap-day edges, and verify `./gradlew :core:domain:test` passes
 - [x] 3.3 Add the `@DefaultDispatcher` qualifier in `:core:domain` and `DispatchersModule` in `:core:data` providing it, then implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher, `runCatching` + `fold` that rethrows `CancellationException` and wraps unknown exceptions in `CsvError.Unknown`) with unit tests using a fake repository for success, `CsvError` passed on, unknown exception → `Unknown`, and cancellation rethrown, and verify `./gradlew :core:domain:test` passes
-- [ ] 3.4 Add `CsvError.FileTooLarge` and map `OutOfMemoryError` to it in `LoadCsvTableUseCase`, with a unit test using a fake repository that throws `OutOfMemoryError`, and verify `./gradlew :core:domain:test` passes
+- [x] 3.4 Add `CsvError.FileTooLarge` and map `OutOfMemoryError` to it in `LoadCsvTableUseCase`, with a unit test using a fake repository that throws `OutOfMemoryError`, and verify `./gradlew :core:domain:test` passes
 
 ## 4. Download
 
