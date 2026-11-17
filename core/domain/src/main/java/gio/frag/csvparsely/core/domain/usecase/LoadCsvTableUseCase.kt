@@ -25,9 +25,9 @@ class LoadCsvTableUseCase @Inject constructor(
      * [CsvError.FileTooLarge], and an unexpected exception becomes [CsvError.Unknown].
      * A canceled load is not a failure: its `CancellationException` is rethrown.
      */
-    suspend operator fun invoke(url: String): Result<CsvTable> {
+    suspend operator fun invoke(): Result<CsvTable> {
         return runCatching {
-            val rawCsv = repository.load(url)
+            val rawCsv = repository.load()
             // Typing goes over every cell, so it runs off the main thread
             withContext(defaultDispatcher) {
                 rawCsv.toCsvTable()

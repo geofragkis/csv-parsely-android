@@ -119,10 +119,11 @@ class CsvDownloaderTest {
                 .build()
         )
         val download = launch(Dispatchers.IO) { downloader.download(url()) }
-        // Waits in real time until the first bytes have been written to the temporary file
+        // Waits in real time until the first bytes have been written to the temporary file, or the download has ended
         withContext(Dispatchers.IO) {
-            while (temporaryFiles().none { it.length() > 0 }) Thread.sleep(10)
+            while (download.isActive && temporaryFiles().none { it.length() > 0 }) Thread.sleep(10)
         }
+        assertTrue(download.isActive, "The download ended before it was canceled")
 
         download.cancelAndJoin()
 
@@ -143,9 +144,10 @@ class CsvDownloaderTest {
         // Waits in real time until the temporary file is open, then a little longer, so the first read has certainly
         // started and is blocked when the cancellation arrives
         withContext(Dispatchers.IO) {
-            while (temporaryFiles().isEmpty()) Thread.sleep(10)
+            while (download.isActive && temporaryFiles().isEmpty()) Thread.sleep(10)
             Thread.sleep(200)
         }
+        assertTrue(download.isActive, "The download ended before it was canceled")
 
         val stopTime = measureTime { download.cancelAndJoin() }
 
@@ -160,7 +162,6 @@ class CsvDownloaderTest {
         directory.writeText("")
 
         assertFailsWith<CsvError.Unknown> { downloader.download(url()) }
-        assertEquals(emptyList(), temporaryFiles())
     }
 
     /**

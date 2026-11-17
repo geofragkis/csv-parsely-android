@@ -12,7 +12,7 @@ class CsvRepositoryImpl @Inject constructor(
     private val csvDownloader: CsvDownloader
 ) : CsvRepository {
 
-    override suspend fun load(url: String): RawCsv {
+    override suspend fun load(): RawCsv {
 
         csvDownloader.download("https://raw.githubusercontent.com/RabobankDev/AssignmentCSV/main/issues.csv")
 

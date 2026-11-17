@@ -11,5 +11,5 @@ import gio.frag.csvparsely.core.domain.model.RawCsv
 interface CsvRepository {
 
     /** Downloads and parses the file. Throws a [CsvError] when that fails. */
-    suspend fun load(url: String): RawCsv
+    suspend fun load(): RawCsv
 }
