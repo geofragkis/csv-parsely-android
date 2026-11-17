@@ -16,12 +16,13 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.io.FileNotFoundException
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
 
 /**
  * Created by Giorgos Fragkis on 17-11-2026
@@ -121,7 +122,7 @@ class CsvDownloaderTest {
         val download = launch(Dispatchers.IO) { downloader.download(url()) }
         // Waits in real time until the first bytes have been written to the temporary file
         withContext(Dispatchers.IO) {
-            while (temporaryFile().length() == 0L) Thread.sleep(10)
+            while (temporaryFiles().none { it.length() > 0 }) Thread.sleep(10)
         }
 
         download.cancelAndJoin()
@@ -131,13 +132,36 @@ class CsvDownloaderTest {
     }
 
     @Test
+    fun `a canceled download stops at once while it waits for data`() = runTest {
+        // The body only starts after 30 seconds, so the first read blocks until the call is canceled
+        server.enqueue(
+            MockResponse.Builder()
+                .body(SAMPLE_CSV)
+                .bodyDelay(30, TimeUnit.SECONDS)
+                .build()
+        )
+        val download = launch(Dispatchers.IO) { downloader.download(url()) }
+        // Waits in real time until the temporary file is open, then a little longer, so the first read has certainly
+        // started and is blocked when the cancellation arrives
+        withContext(Dispatchers.IO) {
+            while (temporaryFiles().isEmpty()) Thread.sleep(10)
+            Thread.sleep(200)
+        }
+
+        val stopTime = measureTime { download.cancelAndJoin() }
+
+        assertTrue(stopTime < 5.seconds, "took $stopTime")
+        assertNoFiles()
+    }
+
+    @Test
     fun `a write failure that is not a full disk is not reported as insufficient storage`() = runTest {
         server.enqueue(MockResponse.Builder().body(SAMPLE_CSV).build())
         // A regular file where the download folder should be, so the temporary file cannot be created
         directory.writeText("")
 
-        assertFailsWith<FileNotFoundException> { downloader.download(url()) }
-        assertFalse(temporaryFile().exists())
+        assertFailsWith<IOException> { downloader.download(url()) }
+        assertEquals(emptyList(), temporaryFiles())
     }
 
     /**
@@ -147,7 +171,8 @@ class CsvDownloaderTest {
      */
     private fun url(): String = server.url("/").toString()
 
-    private fun temporaryFile() = File(directory, TEMP_FILE_NAME)
+    /** The temporary files in the download folder; each download names its own, such as `download123.csv.tmp`. */
+    private fun temporaryFiles(): List<File> = directory.listFiles()?.filter { it.name.endsWith(".tmp") }.orEmpty()
 
     private fun assertNoFiles() {
         assertEquals(emptyList(), directory.list()?.toList().orEmpty())
@@ -155,7 +180,6 @@ class CsvDownloaderTest {
 
     private companion object {
         const val FILE_NAME = "download.csv"
-        const val TEMP_FILE_NAME = "download.csv.tmp"
         const val SAMPLE_CSV = "\"First name\",\"Issue count\"\r\n\"Theo\",5"
         val LARGE_BODY = "x".repeat(64 * 1024)
     }

@@ -48,12 +48,13 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 ### Download to a file, then parse
 
-`CsvDownloader` makes a GET request with OkHttp and writes the body to `cacheDir/csv/download.csv.tmp`, then renames it to `download.csv` once the body has been read completely. Steps:
+`CsvDownloader` makes a GET request with OkHttp and writes the body to a temporary file in `cacheDir/csv/`, then moves it to `download.csv` once the body has been read completely. Steps:
 
-1. A non-2xx status gives `CsvError.Http(code)`. An `IOException` from the call gives `CsvError.Network`.
-2. Copy in a loop: read a chunk from the response source, then write it to the file sink. An exception on the read side is a network error. An exception on the write side is `InsufficientStorage` only when its cause chain contains an `ErrnoException` with `errno == OsConstants.ENOSPC`; any other write exception becomes `CsvError.Unknown`. Keeping the read and the write separate is what lets us tell "disk full" from "connection lost". `ensureActive()` runs between chunks so cancellation stops the copy.
+1. A non-2xx status gives `CsvError.Http(code)`. An `IOException` from the call gives `CsvError.Network`; any other exception (such as running out of memory) is passed on for the use case to map.
+2. Copy in a loop: read a chunk from the response source, then write it to the file sink. An `IOException` on the read side is a network error. An `IOException` on the write side is `InsufficientStorage` only when its direct cause is an `ErrnoException` with `errno == OsConstants.ENOSPC` (Android's `FileOutputStream` throws it that way); any other write `IOException` becomes `CsvError.Unknown`. Keeping the read and the write separate is what lets us tell "disk full" from "connection lost". `ensureActive()` runs between chunks so cancellation stops the copy.
+   `download()` runs all blocking work on the IO dispatcher itself, so it is safe to call from any thread. `execute()` and the body reads block and don't notice coroutine cancellation, so on cancellation the OkHttp `Call` is cancelled, which makes a blocked read fail at once, so a cancelled download stops right away.
 3. On any failure or cancellation, delete the `.tmp` file. On success, rename it over the final file.
-4. Only one download runs at a time, because the ViewModel accepts Retry only in the `Failed` state (see UI). So a fixed `.tmp` name is safe.
+4. Each download writes to its own temporary file (`File.createTempFile`, such as `download123.csv.tmp`), so two downloads never share one: a cancelled download that is still cleaning up can't delete a newer download's file. If the app is killed mid-download, a stray `.tmp` file can stay behind; it's in the cache directory, which Android clears when space runs low.
 
 *Alternatives:* stream straight into the parser (no disk, but a literal reading of "the application must download the file" asks for a file, and the parser would be coupled to the network); Retrofit (adds nothing for one GET of a raw file).
 
@@ -135,7 +136,7 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 |---|---|---|
 | `CsvParser` | JVM unit | every scenario in `csv-parsing` (including UTF-8 vs Windows-1252 bytes), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
 | `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day |
-| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection leaves no file, cancellation mid-copy leaves no file, disk full while writing (ENOSPC from a failing sink) gives `InsufficientStorage`, other write failure gives `Unknown` |
+| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection leaves no file, cancellation mid-copy leaves no file, cancellation while a read is blocked stops at once; with Robolectric (real `ErrnoException`): an ENOSPC write error gives `InsufficientStorage`, another write error gives `Unknown` |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
 | `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
 | `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, Retry from `Failed`, Retry ignored while loading |

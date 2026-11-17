@@ -11,6 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.io.IOException
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 /**
  * Created by Giorgos Fragkis on 17-11-2026
@@ -41,5 +42,12 @@ class CsvDownloaderWriteErrorTest {
         val error = IOException("Stream closed")
 
         assertEquals(CsvError.Unknown(error), downloader.writeError(error))
+    }
+
+    @Test
+    fun `an error that is not an IOException is passed on unchanged`() {
+        val error = OutOfMemoryError()
+
+        assertSame(error, downloader.writeError(error))
     }
 }
