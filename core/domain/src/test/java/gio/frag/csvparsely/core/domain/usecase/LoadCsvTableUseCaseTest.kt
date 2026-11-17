@@ -18,6 +18,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertSame
 
+/**
+ * Created by Giorgos Fragkis on 16-11-2026
+ */
 class LoadCsvTableUseCaseTest {
 
     @Test
@@ -48,6 +51,17 @@ class LoadCsvTableUseCaseTest {
         val result = useCase()
 
         assertSame(error, result.exceptionOrNull())
+    }
+
+    @Test
+    fun `running out of memory becomes FileTooLarge with the original as cause`() = runTest {
+        val outOfMemory = OutOfMemoryError("too large")
+        val useCase = useCase(FakeCsvRepository { throw outOfMemory })
+
+        val result = useCase()
+
+        val error = assertIs<CsvError.FileTooLarge>(result.exceptionOrNull())
+        assertSame(outOfMemory, error.cause)
     }
 
     @Test

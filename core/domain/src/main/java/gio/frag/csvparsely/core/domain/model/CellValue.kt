@@ -3,7 +3,11 @@ package gio.frag.csvparsely.core.domain.model
 import java.time.LocalDate
 import java.time.LocalTime
 
-/** One cell of the table, converted to the type of its column. */
+/**
+ * Created by Giorgos Fragkis on 15-11-2026
+ *
+ * One cell of the table, converted to the type of its column.
+ */
 sealed interface CellValue {
 
     /**

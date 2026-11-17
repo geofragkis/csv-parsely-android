@@ -14,6 +14,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import dagger.hilt.android.AndroidEntryPoint
 import gio.frag.csvparsely.core.design_system.theme.CsvParselyTheme
 
+/**
+ * Created by Giorgos Fragkis on 12-11-2026
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

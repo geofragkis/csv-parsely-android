@@ -8,6 +8,8 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * `csvparsely.android-library`: every Android library module.
  *
  * Applies `com.android.library` with the shared Android baseline and derives the namespace and a resource prefix

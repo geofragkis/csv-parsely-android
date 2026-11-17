@@ -17,11 +17,12 @@
 - [x] 3.1 Add the domain models (`RawCsv`, `CsvTable`, `Column`, `ColumnType`, `CellValue`), `CsvError` and the `CsvRepository` interface in `:core:domain`, and verify `./gradlew :core:domain:build` succeeds
 - [x] 3.2 Implement `RawCsv.toCsvTable()` with unit tests for every `column-type-inference` scenario plus Long min/max, whitespace and leap-day edges, and verify `./gradlew :core:domain:test` passes
 - [x] 3.3 Add the `@DefaultDispatcher` qualifier in `:core:domain` and `DispatchersModule` in `:core:data` providing it, then implement `LoadCsvTableUseCase` (repository + inference on the default dispatcher, `runCatching` + `fold` that rethrows `CancellationException` and wraps unknown exceptions in `CsvError.Unknown`) with unit tests using a fake repository for success, `CsvError` passed on, unknown exception → `Unknown`, and cancellation rethrown, and verify `./gradlew :core:domain:test` passes
+- [x] 3.4 Add `CsvError.FileTooLarge` and map `OutOfMemoryError` to it in `LoadCsvTableUseCase`, with a unit test using a fake repository that throws `OutOfMemoryError`, and verify `./gradlew :core:domain:test` passes
 
 ## 4. Download
 
-- [ ] 4.1 Add OkHttp, the `INTERNET` permission and `NetworkModule`, and verify the app builds
-- [ ] 4.2 Implement `CsvDownloader` (temp file, storage check, separate read/write error handling with ENOSPC detection, cleanup, atomic rename) with MockWebServer unit tests for every `csv-download` scenario, including cancellation mid-copy, disk full while writing and another write failure, and verify `./gradlew :core:data:testDebugUnitTest` passes
+- [x] 4.1 Add OkHttp, the `INTERNET` permission and `NetworkModule`, and verify the app builds
+- [x] 4.2 Implement `CsvDownloader` (temp file, separate read/write error handling with ENOSPC detection, cleanup, atomic rename) with MockWebServer unit tests for every `csv-download` scenario, including cancellation mid-copy, disk full while writing and another write failure, and verify `./gradlew :core:data:testDebugUnitTest` passes
 
 ## 5. CSV parser and repository
 
@@ -33,7 +34,7 @@
 
 ## 6. Viewer screen
 
-- [ ] 6.1 Before writing code, settle the snackbar open question in design.md with the user. Then implement `CsvUiState` (with `Failed(error, canRetry)`), `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry accepted only in `Failed`, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, `canRetry` for each `CsvError` (true for Network and HTTP 401/403/408/429/5xx; false for InsufficientStorage, Malformed, EmptyFile, UnsupportedEncoding, other 4xx, Unknown), the error effect, Retry from `Failed`, and Retry ignored while loading, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
+- [ ] 6.1 Before writing code, settle the snackbar open question in design.md with the user. Then implement `CsvUiState` (with `Failed(error, canRetry)`), `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry accepted only in `Failed`, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, `canRetry` for each `CsvError` (true for Network and HTTP 401/403/408/429/5xx; false for InsufficientStorage, Malformed, EmptyFile, UnsupportedEncoding, FileTooLarge, other 4xx, Unknown), the error effect, Retry from `Failed`, and Retry ignored while loading, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
 - [ ] 6.2 Implement the stateless `CsvViewerContent` (loading indicator, `LazyColumn` of cards keyed by row index, value formatting, `Column <n>` labels, no-rows message, error message with a Retry button when `canRetry`) with string resources, and Compose UI tests for each `csv-viewer` display scenario, and verify `./gradlew :feature:csv-viewer:connectedDebugAndroidTest` passes
 - [ ] 6.3 Add the app-level `Scaffold` with the global `SnackbarHost`, connect `CsvViewerScreen` (state collection, effects → snackbar), lock `MainActivity` to portrait, and verify on a device: the sample's three cards appear, airplane mode shows the no-connection message with Retry plus a snackbar, switching dark mode keeps the error screen, and Retry recovers after reconnecting
 

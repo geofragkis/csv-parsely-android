@@ -5,6 +5,8 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * Enables Compose on an Android module and adds what every Compose module needs: the BOM (which sets the version
  * of all Compose libraries), UI, Material 3, previews, and the Compose UI test libraries.
  */

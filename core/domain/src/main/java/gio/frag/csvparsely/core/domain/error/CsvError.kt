@@ -1,6 +1,8 @@
 package gio.frag.csvparsely.core.domain.error
 
 /**
+ * Created by Giorgos Fragkis on 15-11-2026
+ *
  * Every way loading the CSV can fail. The repository throws it, the use case passes it on inside a `Result`, and the
  * screen shows a message for each kind.
  */
@@ -28,6 +30,11 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
     /** The file is not valid UTF-8. */
     data class UnsupportedEncoding(
         override val cause: Throwable?
+    ) : CsvError(cause)
+
+    /** The app ran out of memory while loading the file. The `OutOfMemoryError` is kept as the [cause]. */
+    data class FileTooLarge(
+        override val cause: Throwable
     ) : CsvError(cause)
 
     /** Anything we did not expect. The original exception is kept as the [cause]. */

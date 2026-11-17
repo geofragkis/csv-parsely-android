@@ -1,6 +1,5 @@
 package gio.frag.csvparsely.core.design_system.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +32,9 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+/**
+ * Created by Giorgos Fragkis on 12-11-2026
+ */
 @Composable
 fun CsvParselyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

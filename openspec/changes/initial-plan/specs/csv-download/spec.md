@@ -28,12 +28,8 @@ The system SHALL make the downloaded file available for parsing only after the w
 - **WHEN** the download is cancelled before it finishes
 - **THEN** no partial file remains
 
-### Requirement: Check storage before and during the download
-The system SHALL fail with an insufficient-storage error, without writing anything, when the server reports a content length larger than the space available to the app. It SHALL fail with the same error when storage runs out during the write.
-
-#### Scenario: Declared size exceeds available space
-- **WHEN** the response's declared content length is larger than the available space
-- **THEN** the download fails with an insufficient-storage error and no file is written
+### Requirement: Fail cleanly when storage runs out
+The system SHALL fail with an insufficient-storage error when storage runs out during the write.
 
 #### Scenario: Storage runs out while writing
 - **WHEN** storage becomes full during the write

@@ -6,6 +6,8 @@ import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.getByType
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * The shared `libs` version catalog. Plugin code has no type-safe accessors, so entries are looked up by alias;
  * `.get()` fails the build at configuration time when an alias doesn't exist.
  */
