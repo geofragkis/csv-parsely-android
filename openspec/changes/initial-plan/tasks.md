@@ -22,7 +22,7 @@
 ## 4. Download
 
 - [x] 4.1 Add OkHttp, the `INTERNET` permission and `NetworkModule`, and verify the app builds
-- [ ] 4.2 Implement `CsvDownloader` (temp file, separate read/write error handling with ENOSPC detection, cleanup, atomic rename) with MockWebServer unit tests for every `csv-download` scenario, including cancellation mid-copy, disk full while writing and another write failure, and verify `./gradlew :core:data:testDebugUnitTest` passes
+- [x] 4.2 Implement `CsvDownloader` (temp file, separate read/write error handling with ENOSPC detection, cleanup, atomic rename) with MockWebServer unit tests for every `csv-download` scenario, including cancellation mid-copy, disk full while writing and another write failure, and verify `./gradlew :core:data:testDebugUnitTest` passes
 
 ## 5. CSV parser and repository
 

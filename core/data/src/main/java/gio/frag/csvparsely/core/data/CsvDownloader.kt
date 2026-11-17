@@ -98,7 +98,11 @@ class CsvDownloader(
         }
     }
 
-    private fun writeError(error: Throwable): CsvError {
+    /**
+     * Maps a failed write to [CsvError.InsufficientStorage] when the disk is full (ENOSPC), and to
+     * [CsvError.Unknown] otherwise. Internal so the mapping can be tested with a real Android ErrnoException.
+     */
+    internal fun writeError(error: Throwable): CsvError {
         val errno = (error.cause as? ErrnoException)?.errno
         return if (errno == OsConstants.ENOSPC) CsvError.InsufficientStorage(error)
         else CsvError.Unknown(error)
