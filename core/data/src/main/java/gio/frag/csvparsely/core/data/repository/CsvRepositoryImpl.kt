@@ -6,6 +6,7 @@ import gio.frag.csvparsely.core.domain.model.RawCsv
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
 import java.net.URL
 import javax.inject.Inject
 
@@ -13,15 +14,13 @@ import javax.inject.Inject
  * Created by Giorgos Fragkis on 16-11-2026
  */
 class CsvRepositoryImpl @Inject constructor(
-    private val csvDownloader: CsvDownloader,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    private val csvDownloader: CsvDownloader
 ) : CsvRepository {
 
     override suspend fun load(url: String): RawCsv {
 
-        withContext(ioDispatcher) {
-            csvDownloader.downloadFile(URL(url))
-        }
+        csvDownloader.download("https://raw.githubusercontent.com/RabobankDev/AssignmentCSV/main/issues.csv")
+
         return RawCsv(
             header = listOf("Name", "Age", "City"),
             rows = listOf(
