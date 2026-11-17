@@ -3,6 +3,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * `csvparsely.jvm-library`: a plain Kotlin/JVM module with no Android dependencies (`:core:domain`).
  * It builds and tests faster than an Android module and cannot reach the framework by accident.
  */

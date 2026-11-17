@@ -9,6 +9,9 @@ import gio.frag.csvparsely.core.domain.di.IoDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 
+/**
+ * Created by Giorgos Fragkis on 16-11-2026
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object DispatchersModule {

@@ -2,6 +2,9 @@ package gio.frag.csvparsely.core.design_system.theme
 
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Created by Giorgos Fragkis on 12-11-2026
+ */
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)

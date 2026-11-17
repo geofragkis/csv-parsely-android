@@ -17,6 +17,9 @@ import kotlin.test.assertNotEquals
 private const val LONG_MIN_VALUE_STRING = "-9223372036854775808"
 private const val LONG_MAX_VALUE_STRING = "9223372036854775807"
 
+/**
+ * Created by Giorgos Fragkis on 16-11-2026
+ */
 class RawCsvToCsvTableTest {
 
     // One type per column

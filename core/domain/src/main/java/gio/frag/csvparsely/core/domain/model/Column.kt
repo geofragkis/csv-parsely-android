@@ -1,6 +1,8 @@
 package gio.frag.csvparsely.core.domain.model
 
 /**
+ * Created by Giorgos Fragkis on 15-11-2026
+ *
  * A column of the table.
  *
  * @property name the name from the header, empty when the header gives none

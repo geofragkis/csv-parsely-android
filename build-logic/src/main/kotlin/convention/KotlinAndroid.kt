@@ -11,6 +11,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * Baseline for every Android module: `compileSdk` and `minSdk` from the catalog, Java and Kotlin target 17.
  *
  * AGP 9 compiles Kotlin itself, so `org.jetbrains.kotlin.android` is not applied; only the compiler options of

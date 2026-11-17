@@ -1,13 +1,8 @@
 package gio.frag.csvparsely.core.data.repository
 
 import gio.frag.csvparsely.core.data.CsvDownloader
-import gio.frag.csvparsely.core.domain.di.IoDispatcher
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl
-import java.net.URL
 import javax.inject.Inject
 
 /**

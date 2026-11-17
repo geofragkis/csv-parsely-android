@@ -4,6 +4,8 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * `csvparsely.hilt`: Hilt dependency injection for an Android module.
  *
  * Applies KSP before the Hilt Gradle plugin (Hilt looks for it), adds the Hilt runtime and runs its compiler

@@ -16,8 +16,11 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 /**
+ * Created by Giorgos Fragkis on 16-11-2026
+ *
  * Downloads the CSV into [directory]. The body is written to a temporary file first, so a failed
  * or canceled download never leaves a partial file behind.
+ *
  */
 class CsvDownloader(
     private val okHttpClient: OkHttpClient,

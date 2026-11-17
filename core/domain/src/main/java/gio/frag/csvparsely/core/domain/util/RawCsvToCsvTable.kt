@@ -48,6 +48,8 @@ private val DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
     .withResolverStyle(ResolverStyle.STRICT)
 
 /**
+ * Created by Giorgos Fragkis on 16-11-2026
+ *
  * Gives each column one type, decided from all of its non-empty values, and converts every cell to that type.
  *
  * A column is INTEGER when every non-empty value is a whole number that fits in a [Long], DATE when every non-empty

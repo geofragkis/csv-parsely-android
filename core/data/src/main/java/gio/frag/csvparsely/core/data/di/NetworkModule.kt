@@ -4,10 +4,13 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.seconds
-import okhttp3.OkHttpClient
 
+/**
+ * Created by Giorgos Fragkis on 16-11-2026
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {

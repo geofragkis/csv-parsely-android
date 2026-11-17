@@ -7,6 +7,8 @@ import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * `csvparsely.android-application`: the `:app` module.
  *
  * Applies `com.android.application` with the shared Android baseline, sets `targetSdk` from the catalog and uses the

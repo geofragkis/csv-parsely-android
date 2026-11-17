@@ -1,6 +1,8 @@
 package gio.frag.csvparsely.core.domain.error
 
 /**
+ * Created by Giorgos Fragkis on 15-11-2026
+ *
  * Every way loading the CSV can fail. The repository throws it, the use case passes it on inside a `Result`, and the
  * screen shows a message for each kind.
  */

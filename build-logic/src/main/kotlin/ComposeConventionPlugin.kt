@@ -8,6 +8,8 @@ import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.getByType
 
 /**
+ * Created by Giorgos Fragkis on 13-11-2026
+ *
  * `csvparsely.compose`: Jetpack Compose for an Android module.
  *
  * Applies the Compose compiler plugin and, once the module's Android plugin is applied, enables Compose with its

@@ -3,6 +3,9 @@ package gio.frag.csvparsely.core.domain.model
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
+/**
+ * Created by Giorgos Fragkis on 16-11-2026
+ */
 class RawCsvTest {
 
     @Test

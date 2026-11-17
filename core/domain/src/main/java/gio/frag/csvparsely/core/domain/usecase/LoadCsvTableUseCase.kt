@@ -10,7 +10,11 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-/** Loads the CSV file and gives every column a type. */
+/**
+ * Created by Giorgos Fragkis on 16-11-2026
+ *
+ * Loads the CSV file and gives every column a type.
+ */
 class LoadCsvTableUseCase @Inject constructor(
     private val repository: CsvRepository,
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
