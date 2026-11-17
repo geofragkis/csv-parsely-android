@@ -67,7 +67,8 @@ class CsvDownloader(
             // newer one. createTempFile puts a random number between the prefix and the suffix and creates the empty
             // file in one step (download<number>.csv.tmp); if a file with that name already exists, it picks another
             // number, so the file is always new
-            val tempFile = File.createTempFile(TEMP_FILE_PREFIX, TEMP_FILE_SUFFIX, directory)
+            val tempFile = runCatching { File.createTempFile(TEMP_FILE_PREFIX, TEMP_FILE_SUFFIX, directory) }
+                .getOrElse { throw writeError(it) }
             // The file the parser reads, only replaced once the whole body is stored
             val file = File(directory, FILE_NAME)
             // Also catches CancellationException on purpose: the partial file must be deleted when the download is
@@ -75,15 +76,15 @@ class CsvDownloader(
             return runCatching {
                 copy(response.body.byteStream(), tempFile)
                 // Puts the complete file in place, replacing the one from an earlier download
-                Files.move(tempFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                runCatching { Files.move(tempFile.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+                    .getOrElse { throw writeError(it) }
             }.fold(
                 // Everything was written and moved: the file is ready to parse
                 onSuccess = { file },
                 onFailure = { exception ->
                     // Removes the partial file so it is never left behind
                     tempFile.delete()
-                    // Passes the failure on unchanged: a CsvError from copy, an IOException from the move (the use
-                    // case turns it into Unknown), or the CancellationException
+                    // Passes the failure on unchanged: a CsvError from copy or the move, or the CancellationException
                     throw exception
                 },
             )

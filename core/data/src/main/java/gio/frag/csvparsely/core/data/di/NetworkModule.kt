@@ -6,6 +6,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -20,5 +21,7 @@ object NetworkModule {
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15.seconds)
         .readTimeout(30.seconds)
+        // Limits the whole download, so a server that sends data very slowly can't keep it loading forever.
+        .callTimeout(2.minutes)
         .build()
 }

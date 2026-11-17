@@ -16,7 +16,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -155,12 +154,12 @@ class CsvDownloaderTest {
     }
 
     @Test
-    fun `a write failure that is not a full disk is not reported as insufficient storage`() = runTest {
+    fun `a file failure that is not a full disk fails with an unexpected error`() = runTest {
         server.enqueue(MockResponse.Builder().body(SAMPLE_CSV).build())
         // A regular file where the download folder should be, so the temporary file cannot be created
         directory.writeText("")
 
-        assertFailsWith<IOException> { downloader.download(url()) }
+        assertFailsWith<CsvError.Unknown> { downloader.download(url()) }
         assertEquals(emptyList(), temporaryFiles())
     }
 
