@@ -10,7 +10,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 **Goals:**
 - Each layer is testable on its own: the parser and type inference as plain JVM unit tests, the download against a fake server, the UI against a fixed state.
-- The parser streams its input, so the file is never loaded into memory as a whole (memory of the parsed rows: see Open Questions).
+- The parser streams its input, so the file is never loaded into memory as a whole (memory of the parsed rows: see Risks / Trade-offs).
 - Each module has one clear responsibility, and the dependency graph has no cycles.
 
 **Non-Goals:**
@@ -74,7 +74,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 - A BOM is removed if it's the first character. A completely empty line (no characters, not even `""`) is skipped when the header has more than one column. In a single-column file it is a row with one empty value. The state machine tracks whether the record contained any character, so `""` is never mistaken for an empty line.
 - EOF while in `IN_QUOTES` gives `CsvError.Malformed(line)`, using the line where the quote opened.
 - No records at all gives `CsvError.EmptyFile`.
-- Records are produced one at a time (an internal `Sequence`). The header is the first record. Rows are padded or kept wider as the spec describes.
+- `records()` returns all records as a list, and `parse()` then picks the header (the first record that is not an empty line) and the rows. Rows are padded or kept wider as the spec describes. *Alternative:* produce the records one at a time with a `Sequence`; it avoids the list of all records (one reference per record), but plain lists are easier to read and explain.
 - One `StringBuilder` is reused per field, so no per-character allocation.
 - The repository opens the file with a UTF-8 decoder set to `CodingErrorAction.REPORT` (not the default `REPLACE`). Invalid bytes throw a `MalformedInputException` during parsing, which becomes `CsvError.UnsupportedEncoding`. The check happens during the one parsing pass, so there's no extra pass over the file. *Alternative:* fall back to Windows-1252. This is kept as a possible follow-up; for now we prefer a clear error to guessing.
 
@@ -144,11 +144,10 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 
 ## Risks / Trade-offs
 
-- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `RawCsv.toCsvTable()` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is roughly twice the table. A file too large for memory fails with `FileTooLarge`, and this is noted as a known limit; pagination or a database would be the next step.
+- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though: while `RawCsv.toCsvTable()` converts them, the raw rows (`RawCsv`) and the typed rows (`CsvTable`) both exist for a moment, so peak memory is up to twice the table, and less in practice, because a TEXT cell reuses the raw `String` instead of copying it. This brief peak is accepted: the raw rows are needed until every column's type is known, and freeing them while converting would save little and make the code harder to follow. A file too large for memory fails with `FileTooLarge`, and this is noted as a known limit; pagination or a database would be the next step.
 
 ## Open Questions
 
-- Memory use of parsing and type inference (see the first risk above). To be discussed again with the user before implementing the parser (task 5.1): whether the brief raw + typed peak is acceptable, or whether rows should be converted in a way that avoids holding both copies. The specs don't change either way.
 - Snackbar for errors: keep the `ShowError` effect (a short snackbar that repeats the error already shown in the `Failed` state), or drop the snackbar and rely on the `Failed` state alone. Also reword "error screen" in the specs to "the error state of the screen", since it is not a separate screen. To be settled with the user before task 6.1. The specs and tasks keep `ShowError` until then.
 - [A validation file uses `;` or dates in another format] → Its columns are shown as TEXT, so data still displays but less precisely. The decision is written down in the specs and can be extended in one place (multi-format date detection is a listed follow-up).
 - [A validation file is a Windows-1252 Excel export] → It's rejected with a clear unsupported-encoding message, not shown with corrupted characters. A Windows-1252 fallback is a listed follow-up.

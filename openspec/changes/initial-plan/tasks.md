@@ -26,7 +26,7 @@
 
 ## 5. CSV parser and repository
 
-- [ ] 5.1 Before writing code, discuss the memory open question in design.md with the user. Then implement `CsvParser` (state machine over a `Reader`) with unit tests for every `csv-parsing` scenario, and verify `./gradlew :core:data:testDebugUnitTest` passes
+- [x] 5.1 Before writing code, discuss the memory open question in design.md with the user. Then implement `CsvParser` (state machine over a `Reader`) with unit tests for every `csv-parsing` scenario, and verify `./gradlew :core:data:testDebugUnitTest` passes
 - [ ] 5.2 Open the file with a strict UTF-8 decoder (`CodingErrorAction.REPORT`) and map `MalformedInputException` to `CsvError.UnsupportedEncoding`, with tests for UTF-8 `Daniëlle` (parsed) and Windows-1252 `Daniëlle` (rejected), and verify the parser tests pass
 - [ ] 5.3 Add adversarial parser tests (quote inside an unquoted field, text after a closing quote, mixed line endings, Unicode/emoji, very long field, 100,000 generated rows within a time bound), fix any failures, and verify all parser tests pass
 - [ ] 5.4 Add the `@IoDispatcher` qualifier in `:core:domain` and its provider in `DispatchersModule`, then implement `CsvRepositoryImpl` (download, then parse on the IO dispatcher) and bind it in `DataModule` with the CSV URL and cache directory, and verify the app builds
@@ -47,9 +47,9 @@
 ## Workflow follow-up
 
 - Review the implementation against the specs, then archive the change with `/opsx:archive`.
+- Optional, on its own branch after this change is done (no spec change): rewrite `CsvParser.records()` to produce records one at a time with a `Sequence` (`sequence { }` + `yield`) instead of returning a list, so the user can decide whether to present it.
 - Nice to have, each as its own OpenSpec change after this one is archived (each changes the specs):
   - Multi-format date detection: one format per column picked from common patterns (`dd-MM-yyyy`, `dd/MM/yyyy`, `MM/dd/yyyy`, `dd.MM.yyyy`, `yyyy/MM/dd`, ISO with an offset, each with an optional time), strict resolving, day-first as the tie-breaker.
   - Windows-1252 fallback, started by the user: the unsupported-encoding error screen gets a button that parses the already downloaded file again as Windows-1252 (no new download).
 - To rethink, raised in code review of 3.2:
-  - Rows of the wrong width: `RawCsv` rejects a row whose size differs from the header with `require`, so a parser bug fails when the `RawCsv` is created instead of with an `IndexOutOfBoundsException` inside `toCsvTable()`. The use case would still report it as `CsvError.Unknown`; decide whether that is enough once the parser (5.1) exists.
   - Parsing cost in `toCsvTable()`: every INTEGER and DATE cell is parsed twice (once to pick the column type, once to convert it, with `checkNotNull` relying on both passes agreeing), and every date-time value first fails the date-only parse with a thrown `DateTimeParseException`. Measured at about 150 ms for 100k date-time cells on the desktop JVM; revisit if loading a large file feels slow on a device.

@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.core.data
+package gio.frag.csvparsely.core.data.download
 
 import gio.frag.csvparsely.core.domain.error.CsvError
 import kotlinx.coroutines.Dispatchers

@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.core.data
+package gio.frag.csvparsely.core.data.download
 
 import android.system.ErrnoException
 import android.system.OsConstants
