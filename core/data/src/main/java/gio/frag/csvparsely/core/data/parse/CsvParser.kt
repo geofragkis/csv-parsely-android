@@ -6,6 +6,7 @@ import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.Reader
+import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.MalformedInputException
 
@@ -68,30 +69,44 @@ class CsvParser {
     }
 
     /**
-     * Reads all of [input] as UTF-8 text and returns the header and rows. Does not close [input].
+     * Reads the file that [open] opens and returns the header and rows. [open] is called once, or twice when the file
+     * is not valid UTF-8, and every stream it returns is closed here.
+     *
+     * The file is read as UTF-8. When it is not valid UTF-8, it is read again as Windows-1252, the default of Excel on
+     * Windows, so the encoding never stops a file from loading: a file in another encoding shows wrong letters instead.
      *
      * Rows shorter than the header are padded with empty values. A row longer than the header adds unnamed (`""`)
      * columns, and every other row is padded to match.
      *
-     * Throws [CsvError.UnsupportedEncoding] when the bytes are not valid UTF-8, [CsvError.EmptyFile] when there is no
-     * record other than empty lines, and [CsvError.Malformed] when a quoted field is never closed. Other errors from
-     * [input] are passed on unchanged.
+     * Throws [CsvError.EmptyFile] when there is no record other than empty lines, and [CsvError.Malformed] when a
+     * quoted field is never closed. Other errors from the stream are passed on unchanged.
      */
-    fun parse(input: InputStream): RawCsv {
-        // REPORT makes invalid bytes, such as a Windows-1252 file, throw a MalformedInputException while reading,
-        // instead of the default REPLACE, which would show them as � without telling anyone
-        val decoder = Charsets.UTF_8.newDecoder()
+    fun parse(open: () -> InputStream): RawCsv {
+        // REPORT makes bytes that are not valid UTF-8 throw a MalformedInputException while reading, instead of the
+        // default REPLACE, which would show them as � without trying the fallback
+        val utf8 = Charsets.UTF_8.newDecoder()
             .onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT)
-        val reader = InputStreamReader(input, decoder)
-        val records = runCatching { records(reader.buffered()) }
-            .getOrElse { error ->
-                throw if (error is MalformedInputException) CsvError.UnsupportedEncoding(error) else error
+
+        val records = runCatching {
+            open().use { input ->
+                val reader = InputStreamReader(input, utf8).buffered()
+                records(reader)
             }
+        }.recoverCatching { error ->
+            if (error !is MalformedInputException) throw error
+            // Read with the default REPLACE: every byte becomes a character, so this second read never fails on the
+            // encoding
+            open().use { input ->
+                records(InputStreamReader(input, WINDOWS_1252).buffered())
+            }
+        }.getOrThrow()
+
         // The header is the first record that is not an empty line
         val headerIndex = records.indexOfFirst { it.isNotEmpty() }
         if (headerIndex == -1) throw CsvError.EmptyFile()
         val header = records[headerIndex]
+
         val rows = mutableListOf<List<String>>()
         // Every record after the header is a row
         records.subList(headerIndex + 1, records.size)
@@ -104,8 +119,10 @@ class CsvParser {
                     else -> Unit
                 }
             }
+
         // The widest record decides how many columns the table has
         val width = maxOf(header.size, rows.maxOfOrNull { it.size } ?: 0)
+
         return RawCsv(
             header = header.padEnd(width),
             rows = rows.map { it.padEnd(width) },
@@ -220,5 +237,8 @@ class CsvParser {
 
         /** What [Reader.read] returns when there is nothing left to read. */
         const val END_OF_FILE = -1
+
+        /** The encoding Excel on Windows uses for "CSV (Comma delimited)", read when a file is not valid UTF-8. */
+        val WINDOWS_1252: Charset = Charset.forName("windows-1252")
     }
 }

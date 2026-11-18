@@ -216,7 +216,7 @@ class CsvParserTest {
         assertEquals(expected, csv)
     }
 
-    // Only UTF-8 encoded files
+    // Read as UTF-8, with a Windows-1252 fallback
 
     @Test
     fun `non-ASCII text encoded as UTF-8 is parsed`() {
@@ -227,11 +227,14 @@ class CsvParserTest {
     }
 
     @Test
-    fun `text encoded as Windows-1252 fails with an unsupported-encoding error`() {
+    fun `text encoded as Windows-1252 is read through the fallback`() {
         // In Windows-1252 the ë is the single byte 0xEB, which is not valid UTF-8
         val bytes = "name\nDaniëlle".toByteArray(Charset.forName("windows-1252"))
 
-        assertFailsWith<CsvError.UnsupportedEncoding> { parser.parse(bytes.inputStream()) }
+        val csv = parser.parse { bytes.inputStream() }
+        val expectedRows = listOf(listOf("Daniëlle"))
+
+        assertEquals(expectedRows, csv.rows)
     }
 
     // Reject files that cannot be parsed
@@ -264,7 +267,7 @@ class CsvParserTest {
     }
 
     /** Parses [text] encoded as UTF-8, as the downloaded file would be. */
-    private fun parse(text: String): RawCsv = parser.parse(text.byteInputStream())
+    private fun parse(text: String): RawCsv = parser.parse { text.byteInputStream() }
 
     private companion object {
         /** The sample file: quoted strings, unquoted integers, CRLF line endings and no final newline. */
