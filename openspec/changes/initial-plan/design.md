@@ -48,13 +48,11 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 ### Download to a file, then parse
 
-`CsvDownloader` makes a GET request with OkHttp and writes the body to a temporary file in `cacheDir/csv/`, then moves it to `download.csv` once the body has been read completely. Steps:
+`CsvDownloader` makes a GET request with OkHttp and copies the body into `cacheDir/csv/download.csv` with `InputStream.copyTo`, replacing the previous file. Steps:
 
-1. A non-2xx status gives `CsvError.Http(code)`. An `IOException` from the call gives `CsvError.Network`; any other exception (such as running out of memory) is passed on for the use case to map.
-2. Copy in a loop: read a chunk from the response source, then write it to the file sink. An `IOException` on the read side is a network error. An `IOException` on the write side is `InsufficientStorage` only when its direct cause is an `ErrnoException` with `errno == OsConstants.ENOSPC` (Android's `FileOutputStream` throws it that way); any other write `IOException` becomes `CsvError.Unknown`. Keeping the read and the write separate is what lets us tell "disk full" from "connection lost". `ensureActive()` runs between chunks so cancellation stops the copy.
-   `download()` runs all blocking work on the IO dispatcher itself, so it is safe to call from any thread. `execute()` and the body reads block and don't notice coroutine cancellation, so on cancellation the OkHttp `Call` is cancelled, which makes a blocked read fail at once, so a cancelled download stops right away.
-3. On any failure or cancellation, delete the `.tmp` file. On success, rename it over the final file.
-4. Each download writes to its own temporary file (`File.createTempFile`, such as `download123.csv.tmp`), so two downloads never share one: a cancelled download that is still cleaning up can't delete a newer download's file. If the app is killed mid-download, a stray `.tmp` file can stay behind; it's in the cache directory, which Android clears when space runs low.
+1. A non-2xx status gives `CsvError.Http(code)`. An `IOException` from the call or the copy gives `CsvError.Network`; any other exception (such as running out of memory) is passed on for the use case to map. A full disk is reported as a network error too: it is rare for a small file in the cache directory, and telling it apart relies on an Android implementation detail (the `ENOSPC` errno inside the `IOException`).
+2. `download()` runs the blocking work on the IO dispatcher itself, so it is safe to call from any thread. `execute()` and the body reads block and don't notice coroutine cancellation, so on cancellation the OkHttp `Call` is cancelled, which makes a blocked read fail at once, so a cancelled download stops right away.
+3. A failed or cancelled download can leave a partial file. It is never parsed, because `download()` throws, and the next download overwrites it. There is no offline cache, and only one load runs at a time (Retry is accepted only in `Failed`), so no temporary file or cleanup is needed.
 
 *Alternatives:* stream straight into the parser (no disk, but a literal reading of "the application must download the file" asks for a file, and the parser would be coupled to the network); Retrofit (adds nothing for one GET of a raw file).
 
@@ -85,20 +83,20 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 `CsvRepository.load(): RawCsv` (download + parse, on the IO dispatcher). `LoadCsvTableUseCase` calls it, then `RawCsv.toCsvTable()` (on the default dispatcher) does one pass per column to pick the type and a second pass to convert. The result is `Result<CsvTable>`.
 
 - INTEGER: trimmed, `^[+-]?(0|[1-9][0-9]*)$` and `toLongOrNull() != null`.
-- DATE: trimmed, `LocalDate.parse` or `LocalDateTime.parse` with strict ISO formatters: a four-digit year from 0001 with no sign, an uppercase `T` before the time, and dates or times that don't exist (`2023-02-30`, `24:00`) rejected instead of adjusted. A cell keeps what the file gave: a date-time stays a date-time (midnight included), and a date-only value has no time.
+- DATE: trimmed, then `java.time`'s built-in ISO parsers, tried in order: `LocalDate.parse`, `LocalDateTime.parse`, `OffsetDateTime.parse`. They are strict by default: dates, times and offsets that don't exist (`2023-02-30`, `24:00`, `+25:00`) are rejected instead of adjusted. Only years 1 to 9999 count as dates: outside them a year can't be shown correctly (year 0000 would show as year 1) or fails when moved to another time zone. A cell keeps what the file gave: a date-time stays a date-time (midnight included), a date-only value has no time, and a value with an offset keeps it.
 - Otherwise TEXT, keeping the raw string.
 
-`CellValue` is a sealed interface: `Text(String)`, `Integer(Long)`, `Date(date: LocalDate, time: LocalTime?)`, `Empty`. `time == null` means the file gave only a date, which keeps a date-only value apart from a real midnight.
+`CellValue` is a sealed interface: `Text(String)`, `Integer(Long)`, `Date(date: LocalDate, time: LocalTime?, offset: ZoneOffset?)`, `Empty`. `time == null` means the file gave only a date, which keeps a date-only value apart from a real midnight. `offset` is set only together with a time.
 
-Dates are shown as written and never converted to the user's time zone. The file does not say whether a value is a calendar date (such as a date of birth) or a moment in time, and converting a calendar date can shift it by a day. Date-times with an offset are typed as TEXT.
+A value with an offset is a moment in time, so the UI shows it in the user's time zone. A value without an offset is shown as written and never converted: the file does not say whether it is a calendar date (such as a date of birth) or a moment, and converting a calendar date can shift it by a day. The domain keeps the offset as read and does not know the device's time zone; the UI converts at display time, so a time-zone change on the device is picked up.
 
 The use case contains real logic (the conversion the brief asks for), so it's more than a call passed through to the repository. *Alternative:* infer inside the parser. That mixes tokenising with a business rule and makes both harder to test.
 
 ### Errors
 
-`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `InsufficientStorage`, `EmptyFile`, `Malformed(line)`, `UnsupportedEncoding`, `FileTooLarge`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
+`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `EmptyFile`, `Malformed(line)`, `UnsupportedEncoding`, `FileTooLarge`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
 
-The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` becomes `CsvError.FileTooLarge` instead of a crash. Loading the file is by far the largest use of memory in the app, so a file too large to hold is the likely cause; `InsufficientStorage` is not used for it, because that would send the user to free disk space, which doesn't help. The memory taken by the failed load is freed once the load fails, so the app can keep running.
+The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` becomes `CsvError.FileTooLarge` instead of a crash. Loading the file is by far the largest use of memory in the app, so a file too large to hold is the likely cause. The memory taken by the failed load is freed once the load fails, so the app can keep running.
 
 ### UI: MVVM with unidirectional data flow, no reducers
 
@@ -110,14 +108,14 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 ```
 
 - `CsvUiState`: `Loading`, `Loaded(columns, rows)`, `NoRows`, `Failed(error, canRetry)`. The error message and the Retry button are part of the state, so they survive any configuration change (the Activity, and with it the `SnackbarHostState`, is recreated, but the ViewModel is not).
-- `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`InsufficientStorage`, `Malformed`, `EmptyFile`, `UnsupportedEncoding`, `FileTooLarge`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
+- `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`Malformed`, `EmptyFile`, `UnsupportedEncoding`, `FileTooLarge`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
 - `CsvEvent`: `Retry`. The ViewModel ignores it unless the state is `Failed`, so a second download can never start while one is running.
 - `CsvEffect`: `ShowError(kind)` (short, no action: it announces the failure, while the screen holds the message and the Retry button).
 - The ViewModel loads in `init`, so a configuration change doesn't reload. Effects go through a `Channel`, so a snackbar is delivered once and not replayed.
 - The app is locked to portrait (`android:screenOrientation="portrait"`). Since Android 16 (we target 37) the platform ignores this on large screens (smallest width ≥ 600dp), so the layout must still work in landscape there. Other configuration changes (dark mode, locale, font size) can happen on any device, which is why the state-based error screen is needed anyway.
 - The screen collects state with `collectAsStateWithLifecycle` and effects in a `LaunchedEffect`. A stateless `CsvViewerContent(state)` holds all rendering so UI tests don't need Hilt.
 - `LazyColumn(items(rows, key = { it.index }, contentType = { "row" }))`. The row index is the key because it's unique and stable, while row content can repeat.
-- Values are formatted in the card composable with two formatters remembered per locale: `ofLocalizedDateTime(MEDIUM, SHORT)` for dates with a time (always shown, midnight included) and `ofLocalizedDate(MEDIUM)` for date-only values. Integers are shown with `toString()` (no grouping, so IDs and years read correctly).
+- Values are formatted in the card composable: the date with `DateTimeFormatter.ofLocalizedDate(MEDIUM)`, remembered per locale, and a time, when there is one, with `DateTimeFormatter.ofPattern("HH:mm")`, joined as `<date>, <time>`, so times are always 24-hour (midnight included). A value with an offset is first converted with `OffsetDateTime.of(date, time, offset).atZoneSameInstant(ZoneId.systemDefault())`. Integers are shown with `toString()` (no grouping, so IDs and years read correctly).
 - The global snackbar: `:app`'s `Scaffold` owns the `SnackbarHostState` and passes it to the screen.
 - Compose strong skipping (on by default with the Kotlin 2.x Compose compiler) means we don't need immutable collection libraries. The UI models are `@Immutable` data classes.
 
@@ -135,12 +133,12 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 | Layer | Test type | What |
 |---|---|---|
 | `CsvParser` | JVM unit | every scenario in `csv-parsing` (including UTF-8 vs Windows-1252 bytes), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
-| `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day |
-| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection leaves no file, cancellation mid-copy leaves no file, cancellation while a read is blocked stops at once; with Robolectric (real `ErrnoException`): an ENOSPC write error gives `InsufficientStorage`, another write error gives `Unknown` |
+| `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day, date-times with an offset (`Z`, positive, negative), an invalid offset |
+| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection gives a network error, cancellation while a read is blocked stops at once |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
 | `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
 | `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, Retry from `Failed`, Retry ignored while loading |
-| `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, unnamed column label, no-rows message, error message with and without Retry button |
+| `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, no-rows message, error message with and without Retry button |
 
 ## Risks / Trade-offs
 

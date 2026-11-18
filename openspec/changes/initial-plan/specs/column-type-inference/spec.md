@@ -49,7 +49,7 @@ The system SHALL type a column as INTEGER when every non-empty value, ignoring s
 - **THEN** the column is TEXT
 
 ### Requirement: Date columns
-The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 calendar date (`yyyy-MM-dd`) or an ISO-8601 local date-time (`yyyy-MM-ddTHH:mm[:ss[.fraction]]`), with a four-digit year from 0001 and no sign. A date value SHALL keep its time of day when one is given, and SHALL record whether the file gave a time at all, so a date-only value is never confused with a value at midnight.
+The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 date, date-time or date-time with an offset, as read by `java.time`'s ISO parsers, with a year from 1 to 9999 (for example `2001-04-20`, `2001-04-20T10:15:30` or `2001-04-20T10:15:30+02:00`). A date value SHALL keep its time and offset when given, and SHALL record whether the file gave a time at all, so a date-only value is never confused with midnight.
 
 #### Scenario: Date-time values
 - **WHEN** a column holds `1978-01-02T00:00:00`
@@ -63,8 +63,20 @@ The system SHALL type a column as DATE when every non-empty value, ignoring surr
 - **WHEN** a column holds `2023-02-30`
 - **THEN** the column is TEXT
 
-#### Scenario: Year zero
-- **WHEN** a column holds `0000-01-01`
+#### Scenario: Date-time with an offset
+- **WHEN** a column holds `2001-04-20T10:15:30+02:00`
+- **THEN** the column is DATE with the value 20 April 2001, 10:15:30, offset +02:00
+
+#### Scenario: Values with and without an offset
+- **WHEN** a column holds `2001-04-20`, `1978-01-02T08:30:00` and `2001-04-20T10:15+02:00`
+- **THEN** the column is DATE and each value keeps its own form
+
+#### Scenario: Year outside 1 to 9999
+- **WHEN** a column holds `0000-01-01` or `+10000-01-01`
+- **THEN** the column is TEXT
+
+#### Scenario: Invalid offset
+- **WHEN** a column holds `2001-04-20T10:15+25:00`
 - **THEN** the column is TEXT
 
 ### Requirement: Text is the fallback

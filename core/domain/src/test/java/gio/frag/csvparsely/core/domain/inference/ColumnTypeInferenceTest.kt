@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.core.domain.util
+package gio.frag.csvparsely.core.domain.inference
 
 import gio.frag.csvparsely.core.domain.model.CellValue
 import gio.frag.csvparsely.core.domain.model.CellValue.Empty
@@ -11,6 +11,7 @@ import gio.frag.csvparsely.core.domain.model.RawCsv
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 
@@ -20,7 +21,7 @@ private const val LONG_MAX_VALUE_STRING = "9223372036854775807"
 /**
  * Created by Giorgos Fragkis on 16-11-2026
  */
-class RawCsvToCsvTableTest {
+class ColumnTypeInferenceTest {
 
     // One type per column
 
@@ -341,37 +342,15 @@ class RawCsvToCsvTableTest {
     }
 
     @Test
-    fun `lowercase t is text`() {
-        val table = singleColumnCSVTable("2001-04-20t10:15")
-        val expectedType = ColumnType.TEXT
-
-        assertEquals(expectedType, table.singleColumnTableType())
-    }
-
-    @Test
-    fun `signed or five-digit years are text`() {
-        val values = listOf("+10000-01-01", "-0001-01-01", "+2001-04-20")
+    fun `years outside 0001 to 9999 are text`() {
+        val values = listOf("0000-01-01", "-0001-01-01", "+10000-01-01", "+999999999-12-31T23:59-18:00")
         val expectedType = ColumnType.TEXT
 
         values.forEach { value ->
             assertEquals(
                 expectedType,
                 singleColumnCSVTable(value).singleColumnTableType(),
-                "for \"$value\""
-            )
-        }
-    }
-
-    @Test
-    fun `year zero is text`() {
-        val values = listOf("0000-01-01", "0000-01-01T00:00:00")
-        val expectedType = ColumnType.TEXT
-
-        values.forEach { value ->
-            assertEquals(
-                expectedType,
-                singleColumnCSVTable(value).singleColumnTableType(),
-                "for \"$value\""
+                "for \"$value\"",
             )
         }
     }
@@ -387,17 +366,39 @@ class RawCsvToCsvTableTest {
     }
 
     @Test
-    fun `date-time with an offset or zone is text`() {
-        val values = listOf("2001-04-20T10:15:30Z", "2001-04-20T10:15:30+02:00")
+    fun `date-time with an offset keeps its offset`() {
+        val table = singleColumnCSVTable("2001-04-20T10:15:30Z", "2001-04-20T10:15:30+02:00", "2001-04-20T10:15-05:30")
+        val expectedType = ColumnType.DATE
+        val expectedResult = listOf(
+            date(2001, 4, 20, LocalTime.of(10, 15, 30), ZoneOffset.UTC),
+            date(2001, 4, 20, LocalTime.of(10, 15, 30), ZoneOffset.ofHours(2)),
+            date(2001, 4, 20, LocalTime.of(10, 15), ZoneOffset.ofHoursMinutes(-5, -30)),
+        )
+
+        assertEquals(expectedType, table.singleColumnTableType())
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
+    fun `values with and without an offset in one column are dates`() {
+        val table = singleColumnCSVTable("2001-04-20", "1978-01-02T08:30:00", "2001-04-20T10:15+02:00")
+        val expectedType = ColumnType.DATE
+        val expectedResult = listOf(
+            date(2001, 4, 20),
+            date(1978, 1, 2, LocalTime.of(8, 30)),
+            date(2001, 4, 20, LocalTime.of(10, 15), ZoneOffset.ofHours(2)),
+        )
+
+        assertEquals(expectedType, table.singleColumnTableType())
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
+    fun `invalid offset is text`() {
+        val table = singleColumnCSVTable("2001-04-20T10:15+25:00")
         val expectedType = ColumnType.TEXT
 
-        values.forEach { value ->
-            assertEquals(
-                expectedType,
-                singleColumnCSVTable(value).singleColumnTableType(),
-                "for \"$value\""
-            )
-        }
+        assertEquals(expectedType, table.singleColumnTableType())
     }
 
     @Test
@@ -486,9 +487,11 @@ class RawCsvToCsvTableTest {
         year: Int,
         month: Int,
         day: Int,
-        time: LocalTime? = null
+        time: LocalTime? = null,
+        offset: ZoneOffset? = null,
     ) = CellValue.Date(
         LocalDate.of(year, month, day),
-        time
+        time,
+        offset,
     )
 }

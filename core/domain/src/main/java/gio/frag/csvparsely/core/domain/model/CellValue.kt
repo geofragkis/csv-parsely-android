@@ -2,6 +2,7 @@ package gio.frag.csvparsely.core.domain.model
 
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneOffset
 
 /**
  * Created by Giorgos Fragkis on 15-11-2026
@@ -20,8 +21,8 @@ sealed interface CellValue {
     /**
      * A value from an INTEGER column.
      *
-     * A [Long] rather than an [Int], so large whole numbers such as IDs or timestamps in milliseconds still count as
-     * integers instead of falling back to text.
+     * A [Long] rather than an [Int], so large whole numbers such as IDs or timestamps in milliseconds
+     * still count as integers instead of falling back to text.
      *
      * @property value the whole number
      */
@@ -31,10 +32,17 @@ sealed interface CellValue {
      * A value from a DATE column.
      *
      * @property date the calendar date
-     * @property time the time of day, null when the file gave only a date, so a date-only value is never mistaken
-     * for midnight
+     * @property time the time of day, null when the file gave only a date, so a date-only value is
+     * never mistaken for midnight
+     * @property offset the offset from UTC as written in the file, such as `+02:00`, or null when
+     * the file gave none.
+     * Only set together with a [time]
      */
-    data class Date(val date: LocalDate, val time: LocalTime?) : CellValue
+    data class Date(
+        val date: LocalDate,
+        val time: LocalTime?,
+        val offset: ZoneOffset?,
+    ) : CellValue
 
     /** An empty or blank value in an INTEGER or DATE column. */
     data object Empty : CellValue

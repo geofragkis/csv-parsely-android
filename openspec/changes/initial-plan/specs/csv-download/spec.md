@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Fetches the remote CSV file into local temporary storage so it can be parsed, without ever exposing a partial or corrupted file.
+Fetches the remote CSV file into the app's cache storage so it can be parsed.
 
 ## ADDED Requirements
 
@@ -17,30 +17,19 @@ The system SHALL download the CSV from its configured URL and store it as a sing
 - **WHEN** a download succeeds while a file from an earlier download exists
 - **THEN** only the new file remains
 
-### Requirement: Never expose a partial file
-The system SHALL make the downloaded file available for parsing only after the whole body has been written. Any partially written data SHALL be deleted when the download fails or is cancelled.
+### Requirement: Stop a cancelled download
+The system SHALL stop a download as soon as it is cancelled, also while it is waiting for data.
 
-#### Scenario: Connection drops mid-download
-- **WHEN** the connection fails after part of the body was written
-- **THEN** the download fails with a network error and no partial file remains
-
-#### Scenario: Download is cancelled
-- **WHEN** the download is cancelled before it finishes
-- **THEN** no partial file remains
-
-### Requirement: Fail cleanly when storage runs out
-The system SHALL fail with an insufficient-storage error when storage runs out during the write.
-
-#### Scenario: Storage runs out while writing
-- **WHEN** storage becomes full during the write
-- **THEN** the download fails with an insufficient-storage error and the partial file is deleted
+#### Scenario: Cancelled while waiting for the body
+- **WHEN** the download is cancelled while it waits for more of the body
+- **THEN** the download stops at once
 
 ### Requirement: Report download failures by kind
-The system SHALL report a failed download as one of: no connection or other network failure, an unsuccessful HTTP status (including the status code), insufficient storage, or an unexpected error. A failure to write the file SHALL be reported as insufficient storage only when the storage is full; any other write failure SHALL be reported as an unexpected error.
+The system SHALL report a failed download as one of: a network failure, an unsuccessful HTTP status (including the status code), or an unexpected error. Any failure while receiving or saving the body SHALL be reported as a network failure.
 
-#### Scenario: Write fails for another reason
-- **WHEN** writing the file fails while the storage still has space (for example the cache directory was removed)
-- **THEN** the download fails with an unexpected error, not an insufficient-storage error, and no partial file remains
+#### Scenario: Saving the file fails
+- **WHEN** writing the file fails (for example the storage is full)
+- **THEN** the download fails with a network error
 
 #### Scenario: Server returns an error status
 - **WHEN** the server responds with status 404

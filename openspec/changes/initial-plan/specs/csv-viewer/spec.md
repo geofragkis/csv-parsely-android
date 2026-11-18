@@ -29,15 +29,15 @@ The system SHALL show each data row as a card in a vertically scrolling list, in
 - **THEN** its values are labelled `Column <n>`, where n is its 1-based position
 
 ### Requirement: Format values by type
-The system SHALL show INTEGER values as plain digits with a sign for negatives, TEXT values unchanged, and empty values as a dash. DATE values SHALL be shown in the device's locale format: a value that has a time in the file SHALL always show that time (midnight included), and a date-only value SHALL show only the date.
+The system SHALL show INTEGER values as plain digits with a sign for negatives, TEXT values unchanged, and empty values as a dash. DATE values SHALL be shown with the date in the device's locale format: a value that has a time in the file SHALL always show that time in 24-hour format (`HH:mm`, midnight as `00:00`), and a date-only value SHALL show only the date.
 
 #### Scenario: Date-time at midnight
 - **WHEN** a DATE value is `1978-01-02T00:00:00` on a device set to English (US)
-- **THEN** it is shown with its time, for example `Jan 2, 1978, 12:00 AM`
+- **THEN** it is shown with its time, for example `Jan 2, 1978, 00:00`
 
 #### Scenario: Date-time in the afternoon
 - **WHEN** a DATE value is `2020-05-01T14:30:00` on a device set to English (US)
-- **THEN** it is shown as, for example, `May 1, 2020, 2:30 PM`
+- **THEN** it is shown as, for example, `May 1, 2020, 14:30`
 
 #### Scenario: Date-only value
 - **WHEN** a DATE value is `2001-04-20` on a device set to English (US)
@@ -47,6 +47,17 @@ The system SHALL show INTEGER values as plain digits with a sign for negatives, 
 - **WHEN** a value is empty
 - **THEN** it is shown as `-`
 
+### Requirement: Date-times with an offset in the device's time zone
+The system SHALL convert a DATE value that has an offset to the device's time zone and show it like any other date-time. A DATE value without an offset SHALL be shown as written and never converted.
+
+#### Scenario: Date-time with an offset
+- **WHEN** a DATE value is `2001-04-20T10:15:30+02:00` on a device set to English (US) in the time zone UTC+01:00
+- **THEN** it is shown in the device's time zone, for example `Apr 20, 2001, 09:15`
+
+#### Scenario: Date of birth without an offset
+- **WHEN** a DATE value is `1978-01-02T00:00:00` on a device in any time zone
+- **THEN** it is shown as `Jan 2, 1978, 00:00`, never moved to another day
+
 ### Requirement: Empty table message
 The system SHALL show a message saying the file has no rows when the file has a header but no data rows.
 
@@ -55,7 +66,7 @@ The system SHALL show a message saying the file has no rows when the file has a 
 - **THEN** a no-rows message is shown instead of the list
 
 ### Requirement: Errors are shown on the screen
-The system SHALL show, in place of the list, a message for the failure kind (no connection, server error with its code, not enough storage, empty file, malformed file, unsupported encoding, file too large to show, unexpected error) when loading fails. The message SHALL remain visible after a configuration change. A snackbar SHALL also announce the failure once.
+The system SHALL show, in place of the list, a message for the failure kind (no connection, server error with its code, empty file, malformed file, unsupported encoding, file too large to show, unexpected error) when loading fails. The message SHALL remain visible after a configuration change. A snackbar SHALL also announce the failure once.
 
 #### Scenario: Offline on start
 - **WHEN** loading fails because the device is offline
@@ -70,7 +81,7 @@ The system SHALL show, in place of the list, a message for the failure kind (no 
 - **THEN** the error message and, if offered, the Retry button are still shown
 
 ### Requirement: Retry from the error screen
-The system SHALL offer a Retry button on the error screen only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (insufficient storage, malformed, empty, unsupported encoding, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
+The system SHALL offer a Retry button on the error screen only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (malformed, empty, unsupported encoding, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
 
 #### Scenario: Retry succeeds
 - **WHEN** the user presses Retry and the download now succeeds

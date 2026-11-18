@@ -4,7 +4,7 @@ import gio.frag.csvparsely.core.domain.di.DefaultDispatcher
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
-import gio.frag.csvparsely.core.domain.util.toCsvTable
+import gio.frag.csvparsely.core.domain.inference.toCsvTable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
