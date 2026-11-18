@@ -37,10 +37,10 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 |---|---|---|
 | `:build-logic` | included build | convention plugins: Android application, Android library, Compose, Hilt, JVM library |
 | `:core:domain` | pure Kotlin/JVM | models (`CsvTable`, `Column`, `ColumnType`, `CellValue`, `RawCsv`), `CsvError`, `CsvRepository` interface, `RawCsv.toCsvTable()`, `LoadCsvTableUseCase`, dispatcher qualifiers |
-| `:core:data` | Android library | `CsvDownloader` (OkHttp), `CsvParser`, `CsvRepositoryImpl`, Hilt modules |
+| `:core:data` | Android library | `CsvDownloader` (OkHttp), `CsvParser`, `CsvRepositoryImpl` (no Hilt: `:app` builds them) |
 | `:core:design-system` | Android library | theme (moved from `:app`) |
 | `:feature:csv-viewer` | Android library | `CsvViewerViewModel`, UI state/event/effect types, screen composables, string resources |
-| `:app` | application | `@HiltAndroidApp`, `MainActivity`, app-level `Scaffold` with the `SnackbarHost` |
+| `:app` | application | `@HiltAndroidApp`, `MainActivity`, app-level `Scaffold` with the `SnackbarHost`, all Hilt modules |
 
 `:feature` never depends on `:core:data`. Only `:app` sees both, so Hilt can bind the repository implementation. `:core:domain` uses only `javax.inject` annotations (no Android, no Hilt plugin), so the domain stays a plain JVM module with fast tests.
 
@@ -123,7 +123,7 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 
 ### Dependency injection
 
-Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (a `@Provides` for `CsvRepository` that builds `CsvRepositoryImpl` with the CSV URL, the cache directory, the downloader and the parser) and one `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`). KSP is used for annotation processing.
+All Hilt modules live in `:app`, the only module that sees both `:core:data` and `:core:domain`: `NetworkModule` (`OkHttpClient` with timeouts), `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`) and `DataModule`. `DataModule` provides `CsvDownloader` (with the cache directory) and `CsvRepository`, a `@Singleton` `CsvRepositoryImpl` built with the CSV URL, the downloader and a `CsvParser`, so only one load writes `download.csv` at a time. `LoadCsvTableUseCase` is created by Hilt through its `@Inject` constructor. `:core:data` has no Hilt annotations. KSP is used for annotation processing.
 
 ### Build changes
 

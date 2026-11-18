@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.core.data.di
+package gio.frag.csvparsely.di
 
 import dagger.Module
 import dagger.Provides
