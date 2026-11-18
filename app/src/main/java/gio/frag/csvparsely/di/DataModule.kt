@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.core.data.di
+package gio.frag.csvparsely.di
 
 import android.content.Context
 import dagger.Module
@@ -14,6 +14,7 @@ import gio.frag.csvparsely.core.domain.repository.CsvRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
 import java.io.File
+import javax.inject.Singleton
 
 /**
  * Created by Giorgos Fragkis on 18-11-2026
@@ -25,17 +26,25 @@ object DataModule {
     private const val CSV_URL = "https://raw.githubusercontent.com/RabobankDev/AssignmentCSV/main/issues.csv"
 
     @Provides
-    fun provideCsvRepository(
+    fun provideCsvDownloader(
         okHttpClient: OkHttpClient,
         @ApplicationContext context: Context,
         @IoDispatcher ioDispatcher: CoroutineDispatcher,
+    ): CsvDownloader = CsvDownloader(
+        okHttpClient = okHttpClient,
+        directory = File(context.cacheDir, "csv"),
+        ioDispatcher = ioDispatcher,
+    )
+
+    // One repository for the whole app, so only one load writes download.csv at a time
+    @Provides
+    @Singleton
+    fun provideCsvRepository(
+        csvDownloader: CsvDownloader,
+        @IoDispatcher ioDispatcher: CoroutineDispatcher,
     ): CsvRepository = CsvRepositoryImpl(
         url = CSV_URL,
-        csvDownloader = CsvDownloader(
-            okHttpClient = okHttpClient,
-            directory = File(context.cacheDir, "csv"),
-            ioDispatcher = ioDispatcher,
-        ),
+        csvDownloader = csvDownloader,
         csvParser = CsvParser(),
         ioDispatcher = ioDispatcher,
     )
