@@ -8,6 +8,7 @@ import gio.frag.csvparsely.core.domain.model.RawCsv
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.format.DateTimeParseException
 
 /** A whole number without leading zeros, optionally signed: `0`, `-3`, `+12`, but not `0123`. */
 private val INTEGER_PATTERN = Regex("[+-]?(0|[1-9][0-9]*)")
@@ -127,7 +128,12 @@ private fun String.toIntegerOrNull(): Long? =
  * `"0000-01-01"` return null.
  */
 private fun String.toDateOrNull(): CellValue.Date? =
-    parseIsoDate().getOrNull()
+    parseIsoDate()
+        .getOrElse { error ->
+            // Only a parse error means "not a date"; anything else, such as running out of memory, is passed on
+            if (error !is DateTimeParseException) throw error
+            null
+        }
         // The parsers also accept years such as 0000 or +999999999, which can't be shown correctly
         ?.takeIf { it.date.year in SUPPORTED_YEARS }
 
@@ -138,6 +144,8 @@ private fun String.toDateOrNull(): CellValue.Date? =
  * For example: `"2001-04-20"` gives `Date(2001-04-20, time = null, offset = null)`, `"1978-01-02T00:00:00"` gives
  * `Date(1978-01-02, time = 00:00, offset = null)`, `"2001-04-20T10:15+02:00"` gives
  * `Date(2001-04-20, time = 10:15, offset = +02:00)`, and `"2023-02-30"` gives a failure.
+ *
+ * Only a [DateTimeParseException] moves on to the next parser; any other error ends the chain unchanged.
  */
 private fun String.parseIsoDate(): Result<CellValue.Date> =
     // Each parser fails when the text is not in its format, so the next one is tried
@@ -147,14 +155,16 @@ private fun String.parseIsoDate(): Result<CellValue.Date> =
             time = null,
             offset = null,
         )
-    }.recoverCatching {
+    }.recoverCatching { error ->
+        if (error !is DateTimeParseException) throw error
         val dateTime = LocalDateTime.parse(this)
         CellValue.Date(
             date = dateTime.toLocalDate(),
             time = dateTime.toLocalTime(),
             offset = null,
         )
-    }.recoverCatching {
+    }.recoverCatching { error ->
+        if (error !is DateTimeParseException) throw error
         val dateTime = OffsetDateTime.parse(this)
         CellValue.Date(
             date = dateTime.toLocalDate(),
