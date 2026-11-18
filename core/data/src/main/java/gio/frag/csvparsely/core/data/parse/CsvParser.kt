@@ -70,7 +70,7 @@ class CsvParser {
      * columns, and every other row is padded to match.
      *
      * Throws [CsvError.EmptyFile] when there is no record other than empty lines, and [CsvError.Malformed] when a
-     * quoted field is never closed.
+     * quoted field is never closed. Errors from [reader] are passed on unchanged.
      */
     fun parse(reader: Reader): RawCsv {
         val records = records(reader.buffered())
@@ -116,8 +116,7 @@ class CsvParser {
         // The character read just before the current one, or null when nothing has been read yet
         var previous: Char? = null
 
-        // Reads the 1st character, returns an Int that corresponds to the Unicode of the character.
-        // When there is nothing left to read, returns -1.
+        // Reads the 1st character as its UTF-16 code. Returns -1 when there is nothing left to read.
         var next = reader.read()
         // Skips a byte order mark by reading the 2nd character
         if (next == BOM) next = reader.read()
