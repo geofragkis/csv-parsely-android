@@ -22,7 +22,8 @@ private val SUPPORTED_YEARS = 1..9999
 /**
  * Created by Giorgos Fragkis on 16-11-2026
  *
- * Gives each column one type, decided from all of its non-empty values, and converts every cell to that type.
+ * Gives each column one type, decided from all of its non-empty values. The cells are converted to it later, when
+ * [CsvTable.row] reads a row.
  *
  * A column is INTEGER when every non-empty value is a whole number that fits in a [Long], DATE when every non-empty
  * value is an ISO date or date-time (with or without an offset), and TEXT otherwise. Surrounding whitespace is ignored
@@ -46,12 +47,6 @@ fun RawCsv.toCsvTable(): CsvTable {
     val columns = header.zip(types) { name, type ->
         Column(name, type)
     }
-    // Creating a list of rows, with their cells converted to their types
-    val typedRows = rows.map { row ->
-        row.mapIndexed { index, value ->
-            value.toCellValue(types[index])
-        }
-    }
 
     // Return the CsvTable, ex:
     // CsvTable(
@@ -62,15 +57,12 @@ fun RawCsv.toCsvTable(): CsvTable {
     //         Column(name = "Date of birth", type = DATE),
     //         Column(name = "avatar", type = TEXT),
     //     ],
-    //     rows = [
-    //         [Text("Theo"), Text("Jansen"), Integer(5), Date(1978-01-02, 00:00, null), Text("https://...png")],
-    //         [Text("Fiona"), Text("de Vries"), Integer(7), Date(1950-11-12, 00:00, null), Text("https://...png")],
-    //         [Text("Petra"), Text("Boersma"), Integer(1), Date(2001-04-20, 00:00, null), Text("https://...png")],
-    //     ],
+    //     rows = the rows of the file, as text
     // )
     return CsvTable(
         columns = columns,
-        rows = typedRows,
+        // The same lists the parser made: no second, typed copy of the table
+        rows = rows,
     )
 }
 
@@ -96,13 +88,13 @@ private fun columnType(values: List<String>): ColumnType {
 }
 
 /**
- * Converts one cell to the type of its column. A TEXT value is kept exactly as it is, and a blank value in an INTEGER
- * or DATE column becomes [CellValue.Empty].
+ * Converts one cell to the type of its column, decided by [toCsvTable]. A TEXT value is kept exactly as it is, and a
+ * blank value in an INTEGER or DATE column becomes [CellValue.Empty]. Internal, so only [CsvTable] uses it.
  *
  * For example: `" 30 "` in an INTEGER column returns `Integer(30)`, `" "` in an INTEGER column returns `Empty`, and
  * `" a "` in a TEXT column returns `Text(" a ")`.
  */
-private fun String.toCellValue(type: ColumnType): CellValue {
+internal fun String.toCellValue(type: ColumnType): CellValue {
     val trimmed = trim()
     if (type != ColumnType.TEXT && trimmed.isEmpty()) return CellValue.Empty
 

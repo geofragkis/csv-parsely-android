@@ -6,6 +6,7 @@ import gio.frag.csvparsely.core.data.repository.CsvRepositoryImpl
 import gio.frag.csvparsely.core.domain.model.CellValue
 import gio.frag.csvparsely.core.domain.model.Column
 import gio.frag.csvparsely.core.domain.model.ColumnType
+import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.usecase.LoadCsvTableUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
@@ -99,7 +100,7 @@ class LoadCsvTableIntegrationTest {
         )
 
         assertEquals(expectedColumns, table.columns)
-        assertEquals(expectedRows, table.rows)
+        assertEquals(expectedRows, table.allRows())
     }
 
     /** A date-time at midnight without an offset, as the sample writes its dates of birth. */
@@ -112,4 +113,7 @@ class LoadCsvTableIntegrationTest {
         time = LocalTime.MIDNIGHT,
         offset = null,
     )
+
+    /** Every row of the table, read through [CsvTable.row] as the screen would. */
+    private fun CsvTable.allRows(): List<List<CellValue>> = (0 until rowCount).map { index -> row(index) }
 }

@@ -456,7 +456,7 @@ class ColumnTypeInferenceTest {
         )
 
         assertEquals(expectedColumns, table.columns)
-        assertEquals(expectedRows, table.rows)
+        assertEquals(expectedRows, table.allRows())
     }
 
     @Test
@@ -469,7 +469,7 @@ class ColumnTypeInferenceTest {
         val expectedRows = emptyList<List<CellValue>>()
 
         assertEquals(expectedColumns, table.columns)
-        assertEquals(expectedRows, table.rows)
+        assertEquals(expectedRows, table.allRows())
     }
 
     /** Converts a file with one column, named `value`, holding [values] from top to bottom. */
@@ -481,7 +481,10 @@ class ColumnTypeInferenceTest {
 
     private fun CsvTable.singleColumnTableType(): ColumnType = columns.single().type
 
-    private fun CsvTable.cells(): List<CellValue> = rows.map { it.single() }
+    private fun CsvTable.cells(): List<CellValue> = allRows().map { it.single() }
+
+    /** Every row of the table, read through [CsvTable.row] as the screen would. */
+    private fun CsvTable.allRows(): List<List<CellValue>> = (0 until rowCount).map { index -> row(index) }
 
     private fun date(
         year: Int,
