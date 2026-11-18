@@ -69,7 +69,8 @@ class CsvParser {
      * Rows shorter than the header are padded with empty values. A row longer than the header adds unnamed (`""`)
      * columns, and every other row is padded to match.
      *
-     * Throws [CsvError.EmptyFile] when there is no record, and [CsvError.Malformed] when a quoted field is never closed.
+     * Throws [CsvError.EmptyFile] when there is no record other than empty lines, and [CsvError.Malformed] when a
+     * quoted field is never closed.
      */
     fun parse(reader: Reader): RawCsv {
         val records = records(reader.buffered())
@@ -98,8 +99,8 @@ class CsvParser {
     }
 
     /**
-     * Reads all of [reader] and returns its records in order. A completely empty line gives an empty list; a line with only `""` gives one
-     * empty value, so the two can be told apart.
+     * Reads all of [reader] and returns its records in order. A completely empty line gives an empty list; a line with
+     * only `""` gives one empty value, so the two can be told apart.
      *
      * CRLF, LF and CR each end a record. Inside quotes, they are part of the value instead.
      */

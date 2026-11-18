@@ -142,6 +142,19 @@ class CsvParserTest {
     }
 
     @Test
+    fun `blank lines before the header are skipped, also in a single-column file`() {
+        // The file, starting with two empty lines:
+        //
+        //
+        // note
+        // a
+        val csv = parse("\n\nnote\na")
+        val expected = RawCsv(header = listOf("note"), rows = listOf(listOf("a")))
+
+        assertEquals(expected, csv)
+    }
+
+    @Test
     fun `trailing blank lines in a file with several columns give no rows`() {
         // The file, ending with two empty lines:
         // a,b

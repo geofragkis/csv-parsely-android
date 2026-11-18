@@ -48,11 +48,15 @@ The system SHALL accept CRLF, LF and CR as record terminators, and a final recor
 - **THEN** each record is read separately
 
 ### Requirement: Ignore byte order mark and blank lines
-The system SHALL ignore a UTF-8 byte order mark at the start of the file. It SHALL skip completely empty lines when the header has more than one column. When the header has one column, an empty line SHALL be a row with an empty value. A line containing only `""` SHALL always be a row.
+The system SHALL ignore a UTF-8 byte order mark at the start of the file. It SHALL skip completely empty lines before the header, and after it when the header has more than one column. When the header has one column, an empty line SHALL be a row with an empty value. A line containing only `""` SHALL always be a row.
 
 #### Scenario: File starts with a BOM
 - **WHEN** the file starts with a UTF-8 BOM
 - **THEN** the first column name does not contain the BOM
+
+#### Scenario: Blank lines before the header
+- **WHEN** a file starts with empty lines, followed by the header `note` and the row `a`
+- **THEN** the header is `note` and the result has one row
 
 #### Scenario: Trailing blank lines
 - **WHEN** a file with several columns ends with several empty lines
