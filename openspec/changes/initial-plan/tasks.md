@@ -24,7 +24,7 @@
 
 - [x] 4.1 Add OkHttp, the `INTERNET` permission and `NetworkModule`, and verify the app builds
 - [x] 4.2 Implement `CsvDownloader` (temp file, separate read/write error handling with ENOSPC detection, cleanup, atomic rename) with MockWebServer unit tests for every `csv-download` scenario, including cancellation mid-copy, disk full while writing and another write failure, and verify `./gradlew :core:data:testDebugUnitTest` passes
-- [ ] 4.3 Simplify `CsvDownloader`: write straight to `download.csv` with `InputStream.copyTo` (no temporary file, move or cleanup) and map any `IOException` from the call or the copy to `CsvError.Network`; remove `CsvError.InsufficientStorage`, the ENOSPC check, `CsvDownloaderWriteErrorTest` and the Robolectric dependency; update `CsvDownloaderTest` to the `csv-download` scenarios, and verify `./gradlew :core:data:testDebugUnitTest` passes
+- [x] 4.3 Simplify `CsvDownloader`: write straight to `download.csv` with `InputStream.copyTo` (no temporary file, move or cleanup) and map any `IOException` from the call or the copy to `CsvError.Network`; remove `CsvError.InsufficientStorage`, the ENOSPC check, `CsvDownloaderWriteErrorTest` and the Robolectric dependency; update `CsvDownloaderTest` to the `csv-download` scenarios, and verify `./gradlew :core:data:testDebugUnitTest` passes
 
 ## 5. CSV parser and repository
 
