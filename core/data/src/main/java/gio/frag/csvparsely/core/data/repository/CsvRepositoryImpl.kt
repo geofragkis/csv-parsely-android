@@ -1,6 +1,6 @@
 package gio.frag.csvparsely.core.data.repository
 
-import gio.frag.csvparsely.core.data.CsvDownloader
+import gio.frag.csvparsely.core.data.download.CsvDownloader
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
 import javax.inject.Inject
