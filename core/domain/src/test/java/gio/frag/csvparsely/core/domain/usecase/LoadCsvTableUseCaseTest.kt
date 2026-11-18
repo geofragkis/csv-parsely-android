@@ -5,7 +5,6 @@ import gio.frag.csvparsely.core.domain.model.CellValue.Integer
 import gio.frag.csvparsely.core.domain.model.CellValue.Text
 import gio.frag.csvparsely.core.domain.model.Column
 import gio.frag.csvparsely.core.domain.model.ColumnType
-import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
 import kotlinx.coroutines.CancellationException
@@ -29,18 +28,17 @@ class LoadCsvTableUseCaseTest {
             header = listOf("First name", "Issue count"),
             rows = listOf(listOf("Theo", "5")),
         )
-        val expectedTable = CsvTable(
-            columns = listOf(
-                Column("First name", ColumnType.TEXT),
-                Column("Issue count", ColumnType.INTEGER),
-            ),
-            rows = listOf(listOf(Text("Theo"), Integer(5))),
+        val expectedColumns = listOf(
+            Column("First name", ColumnType.TEXT),
+            Column("Issue count", ColumnType.INTEGER),
         )
+        val expectedRow = listOf(Text("Theo"), Integer(5))
         val useCase = useCase(FakeCsvRepository { rawCsv })
 
-        val result = useCase()
+        val table = useCase().getOrThrow()
 
-        assertEquals(expectedTable, result.getOrThrow())
+        assertEquals(expectedColumns, table.columns)
+        assertEquals(expectedRow, table.row(0))
     }
 
     @Test
