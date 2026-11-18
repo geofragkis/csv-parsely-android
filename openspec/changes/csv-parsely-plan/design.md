@@ -121,7 +121,7 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 
 ### Dependency injection
 
-Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (`@Binds CsvRepository`, the CSV URL, the cache directory) and one `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`). KSP is used for annotation processing.
+Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (a `@Provides` for `CsvRepository` that builds `CsvRepositoryImpl` with the CSV URL, the cache directory, the downloader and the parser) and one `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`). KSP is used for annotation processing.
 
 ### Build changes
 

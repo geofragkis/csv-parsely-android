@@ -1,28 +1,29 @@
 package gio.frag.csvparsely.core.data.repository
 
 import gio.frag.csvparsely.core.data.download.CsvDownloader
+import gio.frag.csvparsely.core.data.parse.CsvParser
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
-import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 
 /**
  * Created by Giorgos Fragkis on 16-11-2026
+ *
+ * Downloads the CSV from [url] and parses it.
  */
-class CsvRepositoryImpl @Inject constructor(
-    private val csvDownloader: CsvDownloader
+class CsvRepositoryImpl(
+    private val url: String,
+    private val csvDownloader: CsvDownloader,
+    private val csvParser: CsvParser,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : CsvRepository {
 
     override suspend fun load(): RawCsv {
-
-        csvDownloader.download("https://raw.githubusercontent.com/RabobankDev/AssignmentCSV/main/issues.csv")
-
-        return RawCsv(
-            header = listOf("Name", "Age", "City"),
-            rows = listOf(
-                listOf("Alice", "30", "New York"),
-                listOf("Bob", "25", "Los Angeles"),
-                listOf("Charlie", "35", "Chicago")
-            )
-        )
+        val file = csvDownloader.download(url)
+        // Parsing reads the file from disk, so it runs on the IO dispatcher
+        return withContext(ioDispatcher) {
+            csvParser.parse { file.inputStream() }
+        }
     }
 }
