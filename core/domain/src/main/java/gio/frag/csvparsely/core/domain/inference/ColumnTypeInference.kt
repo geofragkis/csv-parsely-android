@@ -121,20 +121,24 @@ private fun String.toIntegerOrNull(): Long? =
     if (INTEGER_PATTERN.matches(this)) toLongOrNull() else null
 
 /**
- * Reads an ISO date, date-time or date-time with an offset, or returns null when the text is not one.
+ * Reads an ISO date, date-time or date-time with an offset whose year is in [SUPPORTED_YEARS], or returns null.
  *
  * For example: `"2001-04-20"` returns `Date(2001-04-20, time = null, offset = null)`, while `"2023-02-30"` and
  * `"0000-01-01"` return null.
  */
-private fun String.toDateOrNull(): CellValue.Date? = parseIsoDate().getOrNull()
+private fun String.toDateOrNull(): CellValue.Date? =
+    parseIsoDate()
+        .getOrNull()
+        // The parsers also accept years such as 0000 or +999999999, which can't be shown correctly
+        ?.takeIf { it.date.year in SUPPORTED_YEARS }
 
 /**
- * Reads an ISO date, date-time or date-time with an offset whose year is in [SUPPORTED_YEARS]. Uses the strict ISO
- * parsers of `java.time`, which reject dates and times that don't exist, such as `2023-02-30` or `24:00`.
+ * Reads an ISO date, date-time or date-time with an offset. Uses the strict ISO parsers of `java.time`, which
+ * reject dates and times that don't exist, such as `2023-02-30` or `24:00`.
  *
  * For example: `"2001-04-20"` gives `Date(2001-04-20, time = null, offset = null)`, `"1978-01-02T00:00:00"` gives
  * `Date(1978-01-02, time = 00:00, offset = null)`, `"2001-04-20T10:15+02:00"` gives
- * `Date(2001-04-20, time = 10:15, offset = +02:00)`, and `"2023-02-30"` and `"0000-01-01"` give a failure.
+ * `Date(2001-04-20, time = 10:15, offset = +02:00)`, and `"2023-02-30"` gives a failure.
  */
 private fun String.parseIsoDate(): Result<CellValue.Date> =
     // Each parser fails when the text is not in its format, so the next one is tried
@@ -158,8 +162,4 @@ private fun String.parseIsoDate(): Result<CellValue.Date> =
             time = dateTime.toLocalTime(),
             offset = dateTime.offset,
         )
-    }.mapCatching { date ->
-        // The parsers also accept years such as 0000 or +999999999, which can't be shown correctly
-        require(date.date.year in SUPPORTED_YEARS)
-        date
     }
