@@ -55,10 +55,7 @@ class CsvDownloader(
             // Creates the download folder on the first run; does nothing when it already exists
             directory.mkdirs()
             val file = File(directory, FILE_NAME)
-            // Copies the body into the file in chunks of 8 KB, so it is never held in memory as a whole.
-            // FileOutputStream empties the file first, so it replaces the one from an earlier download. Any
-            // IOException while reading or writing is reported as a network error: a dropped connection, but also a
-            // full disk, which is rare for a small file in the cache directory
+            // FileOutputStream empties the file first, so it replaces the one from an earlier download
             runCatching {
                 FileOutputStream(file).use { output ->
                     response.body.byteStream().copyTo(output)
