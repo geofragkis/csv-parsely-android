@@ -16,11 +16,6 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
     /** The server answered with a non-2xx status [code]. */
     data class Http(val code: Int) : CsvError()
 
-    /** There is not enough free space to store the downloaded file. */
-    data class InsufficientStorage(
-        override val cause: Throwable?
-    ) : CsvError(cause)
-
     /** The file has no content at all, not even a header. */
     class EmptyFile : CsvError()
 

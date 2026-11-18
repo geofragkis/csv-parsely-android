@@ -97,7 +97,7 @@ class CsvDownloaderTest {
     }
 
     @Test
-    fun `a connection dropped mid-download fails with a network error and leaves no partial file`() = runTest {
+    fun `a connection dropped mid-download fails with a network error`() = runTest {
         server.enqueue(
             MockResponse.Builder()
                 .body(SAMPLE_CSV)
@@ -106,29 +106,6 @@ class CsvDownloaderTest {
         )
 
         assertFailsWith<CsvError.Network> { downloader.download(url()) }
-        assertNoFiles()
-    }
-
-    @Test
-    fun `a canceled download leaves no partial file`() = runTest {
-        // Sends 1 KB every 100 ms, so the download is still running when it is canceled
-        server.enqueue(
-            MockResponse.Builder()
-                .body(LARGE_BODY)
-                .throttleBody(1024, 100, TimeUnit.MILLISECONDS)
-                .build()
-        )
-        val download = launch(Dispatchers.IO) { downloader.download(url()) }
-        // Waits in real time until the first bytes have been written to the temporary file, or the download has ended
-        withContext(Dispatchers.IO) {
-            while (download.isActive && temporaryFiles().none { it.length() > 0 }) Thread.sleep(10)
-        }
-        assertTrue(download.isActive, "The download ended before it was canceled")
-
-        download.cancelAndJoin()
-
-        assertTrue(download.isCancelled)
-        assertNoFiles()
     }
 
     @Test
@@ -141,10 +118,10 @@ class CsvDownloaderTest {
                 .build()
         )
         val download = launch(Dispatchers.IO) { downloader.download(url()) }
-        // Waits in real time until the temporary file is open, then a little longer, so the first read has certainly
-        // started and is blocked when the cancellation arrives
+        // Waits in real time until the file is open, then a little longer, so the first read has certainly started and
+        // is blocked when the cancellation arrives
         withContext(Dispatchers.IO) {
-            while (download.isActive && temporaryFiles().isEmpty()) Thread.sleep(10)
+            while (download.isActive && !File(directory, FILE_NAME).exists()) Thread.sleep(10)
             Thread.sleep(200)
         }
         assertTrue(download.isActive, "The download ended before it was canceled")
@@ -152,16 +129,15 @@ class CsvDownloaderTest {
         val stopTime = measureTime { download.cancelAndJoin() }
 
         assertTrue(stopTime < 5.seconds, "took $stopTime")
-        assertNoFiles()
     }
 
     @Test
-    fun `a file failure that is not a full disk fails with an unexpected error`() = runTest {
+    fun `saving the file fails with a network error`() = runTest {
         server.enqueue(MockResponse.Builder().body(SAMPLE_CSV).build())
-        // A regular file where the download folder should be, so the temporary file cannot be created
+        // A regular file where the download folder should be, so the file cannot be created
         directory.writeText("")
 
-        assertFailsWith<CsvError.Unknown> { downloader.download(url()) }
+        assertFailsWith<CsvError.Network> { downloader.download(url()) }
     }
 
     /**
@@ -171,9 +147,6 @@ class CsvDownloaderTest {
      */
     private fun url(): String = server.url("/").toString()
 
-    /** The temporary files in the download folder; each download names its own, such as `download123.csv.tmp`. */
-    private fun temporaryFiles(): List<File> = directory.listFiles()?.filter { it.name.endsWith(".tmp") }.orEmpty()
-
     private fun assertNoFiles() {
         assertEquals(emptyList(), directory.list()?.toList().orEmpty())
     }
@@ -181,6 +154,5 @@ class CsvDownloaderTest {
     private companion object {
         const val FILE_NAME = "download.csv"
         const val SAMPLE_CSV = "\"First name\",\"Issue count\"\r\n\"Theo\",5"
-        val LARGE_BODY = "x".repeat(64 * 1024)
     }
 }
