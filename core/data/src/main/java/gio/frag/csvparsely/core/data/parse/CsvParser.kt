@@ -82,21 +82,18 @@ class CsvParser {
      * quoted field is never closed. Other errors from the stream are passed on unchanged.
      */
     fun parse(open: () -> InputStream): RawCsv {
-        // REPORT makes bytes that are not valid UTF-8 throw a MalformedInputException while reading, instead of the
-        // default REPLACE, which would show them as � without trying the fallback
-        val utf8 = Charsets.UTF_8.newDecoder()
+        // Fails on bytes that aren't valid UTF-8, so we can retry as Windows-1252
+        val utf8Decoder = Charsets.UTF_8.newDecoder()
             .onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT)
 
         val records = runCatching {
             open().use { input ->
-                val reader = InputStreamReader(input, utf8).buffered()
-                records(reader)
+                records(InputStreamReader(input, utf8Decoder).buffered())
             }
         }.recoverCatching { error ->
             if (error !is MalformedInputException) throw error
-            // Read with the default REPLACE: every byte becomes a character, so this second read never fails on the
-            // encoding
+            // A plain charset never fails, it shows unknown bytes as �
             open().use { input ->
                 records(InputStreamReader(input, WINDOWS_1252).buffered())
             }
