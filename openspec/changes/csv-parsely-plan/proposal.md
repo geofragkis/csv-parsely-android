@@ -9,7 +9,7 @@ The app must download a CSV file from a remote URL and show its contents, with e
 - Split the single `:app` module into a multi-module clean architecture: `:build-logic` (convention plugins), `:core:domain`, `:core:data`, `:core:design-system`, `:feature:csv-viewer`, with `:app` as the entry point.
 - Add Hilt for dependency injection and raise `minSdk` from 24 to 26 so `java.time` is available for date values.
 - Download the CSV with OkHttp to a file in the app's cache directory.
-- Add a hand-written CSV parser (no third-party CSV library) that streams the file row by row and handles quoted fields, escaped quotes, line breaks inside quotes, CRLF/LF/CR line endings, a UTF-8 BOM and a missing final newline. Files that are not valid UTF-8 are rejected with a clear error, never shown with corrupted characters.
+- Add a hand-written CSV parser (no third-party CSV library) that streams the file row by row and handles quoted fields, escaped quotes, line breaks inside quotes, CRLF/LF/CR line endings, a UTF-8 BOM and a missing final newline. Files are read as UTF-8; a file that is not valid UTF-8 is read again as Windows-1252 (the default of Excel on Windows), so the encoding never stops a file from loading.
 - Infer each column's type (TEXT, INTEGER or DATE) from its content and convert every cell to that type.
 - Keep rows whose field count differs from the header: pad short rows and keep extra fields as unnamed columns.
 - Show the rows in a single screen: a `LazyColumn` of non-clickable cards, a loading indicator, and a snackbar for errors (with a Retry action).
@@ -33,4 +33,4 @@ The app must download a CSV file from a remote URL and show its contents, with e
 - **Build**: `minSdk` raised from 24 to 26. Gradle configuration moves into convention plugins.
 - **Permissions**: `INTERNET` added to the manifest.
 - **Out of scope**: Room/offline storage, pagination of files larger than memory, image loading for URL columns, a detail screen, custom loader animations.
-- **Possible follow-ups (separate changes, only after this one is done)**: recognising common non-ISO date formats per column; reading Windows-1252 files when strict UTF-8 decoding fails.
+- **Possible follow-ups (separate changes, only after this one is done)**: recognising common non-ISO date formats per column.

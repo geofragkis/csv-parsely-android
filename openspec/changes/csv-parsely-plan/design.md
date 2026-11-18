@@ -15,7 +15,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 **Non-Goals:**
 - Files larger than available memory (no pagination, no database).
-- Delimiters other than comma. Encodings other than UTF-8 are detected and rejected, not decoded.
+- Delimiters other than comma. Encodings other than UTF-8 and Windows-1252: such a file loads, but its non-ASCII letters show wrong.
 - Date formats other than ISO-8601.
 - Caching or showing a previous download when offline.
 
@@ -58,7 +58,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 ### Parser: a character state machine over a `Reader`
 
-`CsvParser.parse(reader: Reader): RawCsv` reads a `BufferedReader` character by character through a small state machine:
+`CsvParser.parse(open: () -> InputStream): RawCsv` reads a `BufferedReader` character by character through a small state machine:
 
 ```
            ,  -> end field                     "" -> literal "
@@ -74,7 +74,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 - No records at all gives `CsvError.EmptyFile`.
 - `records()` returns all records as a list, and `parse()` then picks the header (the first record that is not an empty line) and the rows. Rows are padded or kept wider as the spec describes. *Alternative:* produce the records one at a time with a `Sequence`; it avoids the list of all records (one reference per record), but plain lists are easier to read and explain.
 - One `StringBuilder` is reused per field, so no per-character allocation.
-- The repository opens the file with a UTF-8 decoder set to `CodingErrorAction.REPORT` (not the default `REPLACE`). Invalid bytes throw a `MalformedInputException` during parsing, which becomes `CsvError.UnsupportedEncoding`. The check happens during the one parsing pass, so there's no extra pass over the file. *Alternative:* fall back to Windows-1252. This is kept as a possible follow-up; for now we prefer a clear error to guessing.
+- `parse()` reads the file as UTF-8 with a decoder set to `CodingErrorAction.REPORT` (not the default `REPLACE`), so invalid bytes throw a `MalformedInputException` instead of silently becoming `�`. On that exception it reads the file again as Windows-1252 (the default of Excel on Windows) with the default lenient decoder, which never fails. The second pass only happens for a non-UTF-8 file. `parse()` takes a function that opens the file (`open: () -> InputStream`), because the bytes may be read twice; the repository passes `{ file.inputStream() }` and the tests pass their bytes. The whole encoding rule lives in the parser. *Alternative:* report an unsupported-encoding error. That stops a common Excel export from loading, for no benefit, since decoding never crashes.
 
 *Alternative:* `readLine()` + `split(',')`. That fails on quoted commas and on line breaks inside quotes, which is exactly what the reviewers' files are likely to test.
 
@@ -94,7 +94,7 @@ The use case contains real logic (the conversion the brief asks for), so it's mo
 
 ### Errors
 
-`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `EmptyFile`, `Malformed(line)`, `UnsupportedEncoding`, `FileTooLarge`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
+`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `EmptyFile`, `Malformed(line)`, `FileTooLarge`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
 
 The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` becomes `CsvError.FileTooLarge` instead of a crash. Loading the file is by far the largest use of memory in the app, so a file too large to hold is the likely cause. The memory taken by the failed load is freed once the load fails, so the app can keep running.
 
@@ -108,7 +108,7 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 ```
 
 - `CsvUiState`: `Loading`, `Loaded(columns, rows)`, `NoRows`, `Failed(error, canRetry)`. The error message and the Retry button are part of the state, so they survive any configuration change (the Activity, and with it the `SnackbarHostState`, is recreated, but the ViewModel is not).
-- `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`Malformed`, `EmptyFile`, `UnsupportedEncoding`, `FileTooLarge`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
+- `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`Malformed`, `EmptyFile`, `FileTooLarge`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
 - `CsvEvent`: `Retry`. The ViewModel ignores it unless the state is `Failed`, so a second download can never start while one is running.
 - `CsvEffect`: `ShowError(kind)` (short, no action: it announces the failure, while the screen holds the message and the Retry button).
 - The ViewModel loads in `init`, so a configuration change doesn't reload. Effects go through a `Channel`, so a snackbar is delivered once and not replayed.
@@ -121,7 +121,7 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 
 ### Dependency injection
 
-Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (`@Binds CsvRepository`, the CSV URL, the cache directory) and one `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`). KSP is used for annotation processing.
+Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (a `@Provides` for `CsvRepository` that builds `CsvRepositoryImpl` with the CSV URL, the cache directory, the downloader and the parser) and one `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`). KSP is used for annotation processing.
 
 ### Build changes
 
@@ -132,10 +132,11 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 
 | Layer | Test type | What |
 |---|---|---|
-| `CsvParser` | JVM unit | every scenario in `csv-parsing` (including UTF-8 vs Windows-1252 bytes), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
+| `CsvParser` | JVM unit | every scenario in `csv-parsing` (including a Windows-1252 file read through the fallback), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
 | `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day, date-times with an offset (`Z`, positive, negative), an invalid offset |
 | `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection gives a network error, cancellation while a read is blocked stops at once |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
+| Parser + type inference on a device | instrumented (emulator or phone) | a generated 100k-row file parsed and typed within a time limit, to check memory and speed where the heap is smaller than on the JVM |
 | `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
 | `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, Retry from `Failed`, Retry ignored while loading |
 | `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, no-rows message, error message with and without Retry button |
@@ -148,6 +149,6 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 
 - Snackbar for errors: keep the `ShowError` effect (a short snackbar that repeats the error already shown in the `Failed` state), or drop the snackbar and rely on the `Failed` state alone. Also reword "error screen" in the specs to "the error state of the screen", since it is not a separate screen. To be settled with the user before task 6.1. The specs and tasks keep `ShowError` until then.
 - [A validation file uses `;` or dates in another format] → Its columns are shown as TEXT, so data still displays but less precisely. The decision is written down in the specs and can be extended in one place (multi-format date detection is a listed follow-up).
-- [A validation file is a Windows-1252 Excel export] → It's rejected with a clear unsupported-encoding message, not shown with corrupted characters. A Windows-1252 fallback is a listed follow-up.
+- [A validation file is a Windows-1252 Excel export] → It's read again as Windows-1252 and shown correctly. A file in another code page loads with garbled non-ASCII letters; the README says so.
 - [Five modules for one screen] → Each module has a distinct responsibility, and the build-logic plugins keep each module's build file to a few lines.
 - [Raising `minSdk` from 24 to 26] → Drops Android 7.x devices, which are negligible today. It avoids enabling desugaring just for `java.time`.

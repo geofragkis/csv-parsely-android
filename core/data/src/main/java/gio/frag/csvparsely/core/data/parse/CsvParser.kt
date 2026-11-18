@@ -3,7 +3,12 @@ package gio.frag.csvparsely.core.data.parse
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import java.io.BufferedReader
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.Reader
+import java.nio.charset.Charset
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.MalformedInputException
 
 /**
  * Created by Giorgos Fragkis on 17-11-2026
@@ -64,20 +69,41 @@ class CsvParser {
     }
 
     /**
-     * Reads all of [reader] and returns the header and rows. Does not close [reader].
+     * Reads the file that [open] opens and returns the header and rows. [open] is called once, or twice when the file
+     * is not valid UTF-8, and every stream it returns is closed here.
+     *
+     * The file is read as UTF-8. When it is not valid UTF-8, it is read again as Windows-1252, the default of Excel on
+     * Windows, so the encoding never stops a file from loading: a file in another encoding shows wrong letters instead.
      *
      * Rows shorter than the header are padded with empty values. A row longer than the header adds unnamed (`""`)
      * columns, and every other row is padded to match.
      *
      * Throws [CsvError.EmptyFile] when there is no record other than empty lines, and [CsvError.Malformed] when a
-     * quoted field is never closed. Errors from [reader] are passed on unchanged.
+     * quoted field is never closed. Other errors from the stream are passed on unchanged.
      */
-    fun parse(reader: Reader): RawCsv {
-        val records = records(reader.buffered())
+    fun parse(open: () -> InputStream): RawCsv {
+        // Fails on bytes that aren't valid UTF-8, so we can retry as Windows-1252
+        val utf8Decoder = Charsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+
+        val records = runCatching {
+            open().use { input ->
+                records(InputStreamReader(input, utf8Decoder).buffered())
+            }
+        }.getOrElse { error ->
+            if (error !is MalformedInputException) throw error
+            // A plain charset never fails, it shows unknown bytes as �
+            open().use { input ->
+                records(InputStreamReader(input, WINDOWS_1252).buffered())
+            }
+        }
+
         // The header is the first record that is not an empty line
         val headerIndex = records.indexOfFirst { it.isNotEmpty() }
         if (headerIndex == -1) throw CsvError.EmptyFile()
         val header = records[headerIndex]
+
         val rows = mutableListOf<List<String>>()
         // Every record after the header is a row
         records.subList(headerIndex + 1, records.size)
@@ -90,8 +116,10 @@ class CsvParser {
                     else -> Unit
                 }
             }
+
         // The widest record decides how many columns the table has
         val width = maxOf(header.size, rows.maxOfOrNull { it.size } ?: 0)
+
         return RawCsv(
             header = header.padEnd(width),
             rows = rows.map { it.padEnd(width) },
@@ -206,5 +234,8 @@ class CsvParser {
 
         /** What [Reader.read] returns when there is nothing left to read. */
         const val END_OF_FILE = -1
+
+        /** The encoding Excel on Windows uses for "CSV (Comma delimited)", read when a file is not valid UTF-8. */
+        val WINDOWS_1252: Charset = Charset.forName("windows-1252")
     }
 }

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Turns any comma-separated, UTF-8 CSV text into a header and rows of raw text fields, tolerating the common variations found in real-world files.
+Turns any comma-separated CSV text (UTF-8, or Windows-1252) into a header and rows of raw text fields, tolerating the common variations found in real-world files.
 
 ## ADDED Requirements
 
@@ -81,8 +81,8 @@ The system SHALL pad a row with fewer fields than the header with empty values. 
 - **WHEN** the header has two columns and a row has three fields
 - **THEN** the table has three columns, the third without a name, and every other row has an empty third value
 
-### Requirement: Only UTF-8 encoded files
-The system SHALL decode the file as UTF-8. It SHALL fail with an unsupported-encoding error when the file contains a byte sequence that is not valid UTF-8, and SHALL NOT replace invalid bytes with substitute characters.
+### Requirement: Read as UTF-8, with a Windows-1252 fallback
+The system SHALL decode the file as UTF-8. When the file contains a byte sequence that is not valid UTF-8, it SHALL decode the whole file again as Windows-1252, replacing the few bytes Windows-1252 does not define with a substitute character. Loading SHALL NOT fail because of the encoding.
 
 #### Scenario: Non-ASCII UTF-8 text
 - **WHEN** a field contains `Daniëlle` encoded as UTF-8
@@ -90,7 +90,7 @@ The system SHALL decode the file as UTF-8. It SHALL fail with an unsupported-enc
 
 #### Scenario: Windows-1252 file
 - **WHEN** a field contains `Daniëlle` encoded as Windows-1252
-- **THEN** parsing fails with an unsupported-encoding error
+- **THEN** the value is `Daniëlle`
 
 ### Requirement: Reject files that cannot be parsed
 The system SHALL fail with a malformed-file error that names the line where the problem starts when a quoted field is never closed. It SHALL fail with an empty-file error when the file has no records.

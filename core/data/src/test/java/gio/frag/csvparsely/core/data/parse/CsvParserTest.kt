@@ -3,9 +3,12 @@ package gio.frag.csvparsely.core.data.parse
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import org.junit.Test
-import java.io.StringReader
+import java.nio.charset.Charset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
 
 /**
  * Created by Giorgos Fragkis on 18-11-2026
@@ -216,6 +219,95 @@ class CsvParserTest {
         assertEquals(expected, csv)
     }
 
+    // Read as UTF-8, with a Windows-1252 fallback
+
+    @Test
+    fun `non-ASCII text encoded as UTF-8 is parsed`() {
+        val csv = parse("name\nDaniëlle")
+        val expectedRows = listOf(listOf("Daniëlle"))
+
+        assertEquals(expectedRows, csv.rows)
+    }
+
+    @Test
+    fun `text encoded as Windows-1252 is read through the fallback`() {
+        // In Windows-1252 the ë is the single byte 0xEB, which is not valid UTF-8
+        val bytes = "name\nDaniëlle".toByteArray(Charset.forName("windows-1252"))
+
+        val csv = parser.parse { bytes.inputStream() }
+        val expectedRows = listOf(listOf("Daniëlle"))
+
+        assertEquals(expectedRows, csv.rows)
+    }
+
+    // Unusual input
+
+    @Test
+    fun `quote inside an unquoted field is kept as text`() {
+        // The file:
+        // x,y
+        // ab"c,d
+        val csv = parse("x,y\nab\"c,d")
+        val expectedRow = listOf("ab\"c", "d")
+
+        assertEquals(expectedRow, csv.rows.single())
+    }
+
+    @Test
+    fun `text after a closing quote is added to the field`() {
+        // The file:
+        // x,y
+        // "ab"cd,e
+        val csv = parse("x,y\n\"ab\"cd,e")
+        val expectedRow = listOf("abcd", "e")
+
+        assertEquals(expectedRow, csv.rows.single())
+    }
+
+    @Test
+    fun `mixed line endings in one file are all read`() {
+        val csv = parse("a,b\r\n1,2\n3,4\r5,6")
+        val expectedRows = listOf(
+            listOf("1", "2"),
+            listOf("3", "4"),
+            listOf("5", "6"),
+        )
+
+        assertEquals(expectedRows, csv.rows)
+    }
+
+    @Test
+    fun `accented letters and emoji are kept`() {
+        val csv = parse("name,mood\nZoë,😀👍🏽")
+        val expectedRow = listOf("Zoë", "😀👍🏽")
+
+        assertEquals(expectedRow, csv.rows.single())
+    }
+
+    @Test
+    fun `very long field is read whole`() {
+        val longValue = "x".repeat(1_000_000)
+        val csv = parse("note\n\"$longValue\"")
+
+        assertEquals(longValue, csv.rows.single().single())
+    }
+
+    @Test
+    fun `100,000 rows are parsed within a few seconds`() {
+        val text = buildString {
+            append("id,name,date\r\n")
+            repeat(100_000) { index ->
+                append("$index,\"Name $index\",2001-04-20T10:15:00\r\n")
+            }
+        }
+
+        lateinit var csv: RawCsv
+        val duration = measureTime { csv = parse(text) }
+
+        assertEquals(100_000, csv.rows.size)
+        assertTrue(duration < 5.seconds, "took $duration")
+    }
+
     // Reject files that cannot be parsed
 
     @Test
@@ -245,7 +337,8 @@ class CsvParserTest {
         assertFailsWith<CsvError.EmptyFile> { parse("\uFEFF\r\n\n\r") }
     }
 
-    private fun parse(text: String): RawCsv = parser.parse(StringReader(text))
+    /** Parses [text] encoded as UTF-8, as the downloaded file would be. */
+    private fun parse(text: String): RawCsv = parser.parse { text.byteInputStream() }
 
     private companion object {
         /** The sample file: quoted strings, unquoted integers, CRLF line endings and no final newline. */

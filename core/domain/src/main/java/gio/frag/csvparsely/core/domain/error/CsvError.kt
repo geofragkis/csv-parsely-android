@@ -22,11 +22,6 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
     /** A quoted field opened on [line] is never closed. */
     data class Malformed(val line: Int) : CsvError()
 
-    /** The file is not valid UTF-8. */
-    data class UnsupportedEncoding(
-        override val cause: Throwable?
-    ) : CsvError(cause)
-
     /** The app ran out of memory while loading the file. The `OutOfMemoryError` is kept as the [cause]. */
     data class FileTooLarge(
         override val cause: Throwable
