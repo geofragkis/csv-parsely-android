@@ -127,8 +127,7 @@ private fun String.toIntegerOrNull(): Long? =
  * `"0000-01-01"` return null.
  */
 private fun String.toDateOrNull(): CellValue.Date? =
-    parseIsoDate()
-        .getOrNull()
+    parseIsoDate().getOrNull()
         // The parsers also accept years such as 0000 or +999999999, which can't be shown correctly
         ?.takeIf { it.date.year in SUPPORTED_YEARS }
 
