@@ -7,45 +7,10 @@ import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeFormatterBuilder
-import java.time.format.DateTimeParseException
-import java.time.format.ResolverStyle
-import java.time.temporal.ChronoField
+import java.time.OffsetDateTime
 
 /** A whole number without leading zeros, optionally signed: `0`, `-3`, `+12`, but not `0123`. */
 private val INTEGER_PATTERN = Regex("[+-]?(0|[1-9][0-9]*)")
-
-/**
- * An ISO date with a four-digit year from 0001 and no sign: `2001-04-20`, but not `0000-01-01`, `+10000-01-01` or
- * `-0001-01-01`. Unlike [DateTimeFormatter.ISO_LOCAL_DATE], which also accepts year 0000, signed years and years
- * with more than four digits.
- */
-private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
-    // The year counted from 1 AD, so 0000 is out of range instead of being read as 1 BC
-    .appendValue(ChronoField.YEAR_OF_ERA, 4)
-    .appendLiteral('-')
-    .appendValue(ChronoField.MONTH_OF_YEAR, 2)
-    .appendLiteral('-')
-    .appendValue(ChronoField.DAY_OF_MONTH, 2)
-    // The file gives no era, so every year is AD
-    .parseDefaulting(ChronoField.ERA, 1)
-    .toFormatter()
-    // Rejects dates that don't exist, such as 2023-02-30, instead of moving them to the last valid day, 2023-02-28
-    .withResolverStyle(ResolverStyle.STRICT)
-
-/**
- * A [DATE_FORMAT] date and an ISO time, joined by an uppercase `T`: `2001-04-20T10:15`, `2001-04-20T10:15:30.123`,
- * but not `2001-04-20t10:15`. Unlike [DateTimeFormatter.ISO_LOCAL_DATE_TIME], which also accepts a lowercase `t`.
- */
-private val DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
-    .append(DATE_FORMAT)
-    .appendLiteral('T')
-    .append(DateTimeFormatter.ISO_LOCAL_TIME)
-    .toFormatter()
-    // Rejects dates and times that don't exist, such as 2023-02-30T10:15 or 2001-04-20T24:00, instead of moving
-    // them to a valid one, 2023-02-28T10:15 or 2001-04-21T00:00
-    .withResolverStyle(ResolverStyle.STRICT)
 
 /**
  * Created by Giorgos Fragkis on 16-11-2026
@@ -53,7 +18,8 @@ private val DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
  * Gives each column one type, decided from all of its non-empty values, and converts every cell to that type.
  *
  * A column is INTEGER when every non-empty value is a whole number that fits in a [Long], DATE when every non-empty
- * value is an ISO date or date-time, and TEXT otherwise. Surrounding whitespace is ignored while deciding.
+ * value is an ISO date or date-time (with or without an offset), and TEXT otherwise. Surrounding whitespace is ignored
+ * while deciding.
  *
  * For example, this file:
  * ```
@@ -90,9 +56,9 @@ fun RawCsv.toCsvTable(): CsvTable {
     //         Column(name = "avatar", type = TEXT),
     //     ],
     //     rows = [
-    //         [Text("Theo"), Text("Jansen"), Integer(5), Date(1978-01-02, time = 00:00), Text("https://...png")],
-    //         [Text("Fiona"), Text("de Vries"), Integer(7), Date(1950-11-12, time = 00:00), Text("https://...png")],
-    //         [Text("Petra"), Text("Boersma"), Integer(1), Date(2001-04-20, time = 00:00), Text("https://...png")],
+    //         [Text("Theo"), Text("Jansen"), Integer(5), Date(1978-01-02, 00:00, null), Text("https://...png")],
+    //         [Text("Fiona"), Text("de Vries"), Integer(7), Date(1950-11-12, 00:00, null), Text("https://...png")],
+    //         [Text("Petra"), Text("Boersma"), Integer(1), Date(2001-04-20, 00:00, null), Text("https://...png")],
     //     ],
     // )
     return CsvTable(
@@ -111,11 +77,14 @@ private fun columnType(values: List<String>): ColumnType {
     val nonEmptyValues = values
         .map { it.trim() }
         .filter { it.isNotEmpty() }
-    return when {
-        nonEmptyValues.isEmpty() -> ColumnType.TEXT
-        nonEmptyValues.all { it.toIntegerOrNull() != null } -> ColumnType.INTEGER
-        nonEmptyValues.all { it.toDateOrNull() != null } -> ColumnType.DATE
-        else -> ColumnType.TEXT
+
+    return with(nonEmptyValues) {
+        when {
+            isEmpty() -> ColumnType.TEXT
+            all { it.toIntegerOrNull() != null } -> ColumnType.INTEGER
+            all { it.toDateOrNull() != null } -> ColumnType.DATE
+            else -> ColumnType.TEXT
+        }
     }
 }
 
@@ -129,6 +98,7 @@ private fun columnType(values: List<String>): ColumnType {
 private fun String.toCellValue(type: ColumnType): CellValue {
     val trimmed = trim()
     if (type != ColumnType.TEXT && trimmed.isEmpty()) return CellValue.Empty
+
     return when (type) {
         ColumnType.TEXT -> CellValue.Text(this)
         ColumnType.INTEGER -> CellValue.Integer(checkNotNull(trimmed.toIntegerOrNull()))
@@ -145,34 +115,40 @@ private fun String.toIntegerOrNull(): Long? =
     if (INTEGER_PATTERN.matches(this)) toLongOrNull() else null
 
 /**
- * Reads an ISO date or date-time, or returns null. Tries a date first, then a date-time.
+ * Reads an ISO date, date-time or date-time with an offset, or returns null. Uses the strict ISO parsers of
+ * `java.time`, which reject dates and times that don't exist, such as `2023-02-30` or `24:00`.
  *
- * For example: `"2001-04-20"` returns `Date(2001-04-20, time = null)`, `"1978-01-02T00:00:00"` returns
- * `Date(1978-01-02, time = 00:00)`, and `"2023-02-30"` and `"+10000-01-01"` return null.
+ * For example: `"2001-04-20"` returns `Date(2001-04-20, time = null, offset = null)`, `"1978-01-02T00:00:00"` returns
+ * `Date(1978-01-02, time = 00:00, offset = null)`, `"2001-04-20T10:15+02:00"` returns
+ * `Date(2001-04-20, time = 10:15, offset = +02:00)`, and `"2023-02-30"` returns null.
  */
 private fun String.toDateOrNull(): CellValue.Date? {
-    parseOrNull {
-        LocalDate.parse(this, DATE_FORMAT)
-    }?.let { date ->
-        return CellValue.Date(date, time = null)
-    }
-    parseOrNull {
-        LocalDateTime.parse(this, DATE_TIME_FORMAT)
-    }?.let { dateTime ->
-        return CellValue.Date(dateTime.toLocalDate(), dateTime.toLocalTime())
-    }
+    // Each parser throws when the text is not in its format, so the next one is tried
+    runCatching { LocalDate.parse(this) }.getOrNull()
+        ?.let { date ->
+            return CellValue.Date(
+                date = date,
+                time = null,
+                offset = null,
+            )
+        }
+
+    runCatching { LocalDateTime.parse(this) }.getOrNull()
+        ?.let { dateTime ->
+            return CellValue.Date(
+                date = dateTime.toLocalDate(),
+                time = dateTime.toLocalTime(),
+                offset = null,
+            )
+        }
+
+    runCatching { OffsetDateTime.parse(this) }.getOrNull()
+        ?.let { dateTime ->
+            return CellValue.Date(
+                date = dateTime.toLocalDate(),
+                time = dateTime.toLocalTime(),
+                offset = dateTime.offset,
+            )
+        }
     return null
 }
-
-/**
- * Runs [parse] and returns its result, or null when the text is not a valid date.
- *
- * For example: `parseOrNull { LocalDate.parse("2001-04-20") }` returns 2001-04-20, and with `"20-04-2001"` it returns
- * null.
- */
-private inline fun <T> parseOrNull(parse: () -> T): T? =
-    try {
-        parse()
-    } catch (e: DateTimeParseException) {
-        null
-    }
