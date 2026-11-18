@@ -113,8 +113,10 @@ class CsvParser {
         // The line being read, counted from 1, and the line where the current quoted field opened
         var line = 1
         var quoteLine = 0
-        // The character read just before the current one, or null when nothing has been read yet
-        var previous: Char? = null
+        // Whether the character read just before the current one was a CR ('\r'). When a LF ('\n') follows a CR, the
+        // two are one CRLF line ending, so the LF must not end a second record or count a second line. False before
+        // anything has been read
+        var previousWasCr = false
 
         // Reads the 1st character as its UTF-16 code. Returns -1 when there is nothing left to read.
         var next = reader.read()
@@ -144,7 +146,7 @@ class CsvParser {
 
                     '\n' -> {
                         // After a CR the record has already ended: CRLF is one line ending
-                        if (previous != '\r') records.add(record.endRecord())
+                        if (!previousWasCr) records.add(record.endRecord())
                         state = State.FIELD_START
                     }
 
@@ -173,9 +175,14 @@ class CsvParser {
                     }
                 }
             }
-            // CRLF counts as one line break, also inside quotes
-            if (char == '\r' || (char == '\n' && previous != '\r')) line++
-            previous = char
+            // If \r, the line ended so do line++
+            // If \n, ask: was the character just before this an \r?
+            // - No: then this \n is the line ending on its own (Linux/Mac), the line ended so do line++
+            // - Yes: then this \n is just the tail of a Windows \r\n. The \r already ended the line,
+            //   so the \n is ignored.
+            if (char == '\r' || (char == '\n' && !previousWasCr)) line++
+
+            previousWasCr = char == '\r'
             // Reads the next character
             next = reader.read()
         }
