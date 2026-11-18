@@ -123,7 +123,7 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 
 ### Dependency injection
 
-All Hilt modules live in `:app`, the only module that sees both `:core:data` and `:core:domain`: `NetworkModule` (`OkHttpClient` with timeouts), `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`) and `DataModule`. `DataModule` provides `CsvDownloader` (with the cache directory) and `CsvRepository`, a `@Singleton` `CsvRepositoryImpl` built with the CSV URL, the downloader and a `CsvParser`, so only one load writes `download.csv` at a time. `LoadCsvTableUseCase` is created by Hilt through its `@Inject` constructor. `:core:data` has no Hilt annotations. KSP is used for annotation processing.
+All Hilt modules live in `:app`, the only module that sees both `:core:data` and `:core:domain`: `NetworkModule` (`OkHttpClient` with timeouts), `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`) and `DataModule`. `DataModule` provides `CsvDownloader` (with the cache directory) and `CsvRepository`, a `@Singleton` `CsvRepositoryImpl` built with the CSV URL, the downloader and a `CsvParser`, so one repository owns `download.csv`. Loads don't overlap because the ViewModel only starts a new one after the previous one failed (see UI). `LoadCsvTableUseCase` is created by Hilt through its `@Inject` constructor. `:core:data` has no Hilt annotations. KSP is used for annotation processing.
 
 ### Build changes
 

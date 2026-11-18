@@ -36,7 +36,7 @@ object DataModule {
         ioDispatcher = ioDispatcher,
     )
 
-    // One repository for the whole app, so only one load writes download.csv at a time
+    // One repository for the whole app, so one owner of download.csv
     @Provides
     @Singleton
     fun provideCsvRepository(
