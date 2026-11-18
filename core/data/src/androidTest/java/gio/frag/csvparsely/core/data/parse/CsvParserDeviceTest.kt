@@ -44,26 +44,4 @@ class CsvParserDeviceTest {
         assertTrue("took $duration", duration < 10.seconds)
     }
 
-    // Temporary (task 5.8): measures 1,000,000 rows on a device, then is removed again
-    @Test
-    fun millionRowsAreParsedAndTypedWithinTwoMinutes() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val file = File(context.cacheDir, "very-large.csv")
-        file.bufferedWriter().use { writer ->
-            writer.write("id,name,date\r\n")
-            repeat(1_000_000) { index ->
-                writer.write("$index,\"Name $index\",2001-04-20T10:15:00\r\n")
-            }
-        }
-
-        lateinit var table: CsvTable
-        val duration = measureTime {
-            table = CsvParser()
-                .parse { file.inputStream() }
-                .toCsvTable()
-        }
-
-        assertEquals(1_000_000, table.rowCount)
-        assertTrue("took $duration", duration < 120.seconds)
-    }
 }
