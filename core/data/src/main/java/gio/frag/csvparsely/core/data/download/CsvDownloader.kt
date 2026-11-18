@@ -36,16 +36,12 @@ class CsvDownloader(
         val call = okHttpClient.newCall(Request.Builder().url(url).build())
         val download = async(ioDispatcher) { store(call) }
         runCatching { download.await() }
-            .fold(
-                onSuccess = { file -> file },
-                onFailure = { error ->
-                    // On cancellation, download is canceled with this scope, but execute() and the body reads block
-                    // their thread and don't notice. Canceling the call makes them throw at once, so the download
-                    // stops
-                    if (error is CancellationException) call.cancel()
-                    throw error
-                },
-            )
+            .getOrElse { error ->
+                // On cancellation, download is canceled with this scope, but execute() and the body reads block
+                // their thread and don't notice. Canceling the call makes them throw at once, so the download stops
+                if (error is CancellationException) call.cancel()
+                throw error
+            }
     }
 
     /** Runs [call] and stores the response body. Blocks the thread, so it only runs on [ioDispatcher]. */
