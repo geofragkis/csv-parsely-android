@@ -4,7 +4,6 @@ import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import java.io.BufferedReader
 import java.io.Reader
-import kotlin.collections.iterator
 
 /**
  * Created by Giorgos Fragkis on 17-11-2026
@@ -37,7 +36,7 @@ import kotlin.collections.iterator
  * `listOf("Fiona", "de\nVries")`, where the line break is part of the surname.
  *
  * The parser reads the file one character at a time instead of loading it all into memory first. While reading, it
- * keeps in memory only the rows it has finished so far and the record it is reading now.
+ * keeps in memory the records it has finished so far and the record it is reading now.
  *
  * A record ends with any of the common line endings, made of CR (Carriage Return, `'\r'`) and LF (Line Feed, `'\n'`):
  *

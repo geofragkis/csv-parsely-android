@@ -100,7 +100,7 @@ The system SHALL fail with a malformed-file error that names the line where the 
 - **THEN** parsing fails with an empty-file error
 
 ### Requirement: Stream the file while parsing
-The system SHALL read the file as a stream, holding no more than the current record in addition to the rows already produced.
+The system SHALL read the file as a stream, one character at a time, and SHALL NOT load the whole file into memory at once. While parsing, it SHALL hold only the records already read and the record being read.
 
 #### Scenario: Large file
 - **WHEN** a generated file with 100,000 rows is parsed
