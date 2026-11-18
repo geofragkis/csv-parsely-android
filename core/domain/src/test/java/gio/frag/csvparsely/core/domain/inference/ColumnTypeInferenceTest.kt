@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.core.domain.util
+package gio.frag.csvparsely.core.domain.inference
 
 import gio.frag.csvparsely.core.domain.model.CellValue
 import gio.frag.csvparsely.core.domain.model.CellValue.Empty
@@ -21,7 +21,7 @@ private const val LONG_MAX_VALUE_STRING = "9223372036854775807"
 /**
  * Created by Giorgos Fragkis on 16-11-2026
  */
-class RawCsvToCsvTableTest {
+class ColumnTypeInferenceTest {
 
     // One type per column
 

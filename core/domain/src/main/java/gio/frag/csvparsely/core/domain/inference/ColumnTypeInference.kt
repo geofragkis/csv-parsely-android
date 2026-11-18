@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.core.domain.util
+package gio.frag.csvparsely.core.domain.inference
 
 import gio.frag.csvparsely.core.domain.model.CellValue
 import gio.frag.csvparsely.core.domain.model.Column

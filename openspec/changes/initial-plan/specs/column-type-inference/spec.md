@@ -49,7 +49,7 @@ The system SHALL type a column as INTEGER when every non-empty value, ignoring s
 - **THEN** the column is TEXT
 
 ### Requirement: Date columns
-The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 date (`yyyy-MM-dd`), date-time (`yyyy-MM-ddTHH:mm[:ss[.fraction]]`) or date-time with an offset (`Z` or `±HH:mm` at the end). A date value SHALL keep its time and offset when given, and SHALL record whether the file gave a time at all, so a date-only value is never confused with midnight.
+The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 date (`yyyy-MM-dd`), date-time (`yyyy-MM-ddTHH:mm[:ss[.fraction]]`) or date-time followed by an ISO-8601 offset (such as `Z` or `±HH:mm`). A date value SHALL keep its time and offset when given, and SHALL record whether the file gave a time at all, so a date-only value is never confused with midnight.
 
 #### Scenario: Date-time values
 - **WHEN** a column holds `1978-01-02T00:00:00`
