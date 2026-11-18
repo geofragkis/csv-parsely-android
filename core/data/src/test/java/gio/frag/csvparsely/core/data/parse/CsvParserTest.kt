@@ -3,7 +3,7 @@ package gio.frag.csvparsely.core.data.parse
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import org.junit.Test
-import java.io.StringReader
+import java.nio.charset.Charset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -216,6 +216,24 @@ class CsvParserTest {
         assertEquals(expected, csv)
     }
 
+    // Only UTF-8 encoded files
+
+    @Test
+    fun `non-ASCII text encoded as UTF-8 is parsed`() {
+        val csv = parse("name\nDaniëlle")
+        val expectedRows = listOf(listOf("Daniëlle"))
+
+        assertEquals(expectedRows, csv.rows)
+    }
+
+    @Test
+    fun `text encoded as Windows-1252 fails with an unsupported-encoding error`() {
+        // In Windows-1252 the ë is the single byte 0xEB, which is not valid UTF-8
+        val bytes = "name\nDaniëlle".toByteArray(Charset.forName("windows-1252"))
+
+        assertFailsWith<CsvError.UnsupportedEncoding> { parser.parse(bytes.inputStream()) }
+    }
+
     // Reject files that cannot be parsed
 
     @Test
@@ -245,7 +263,8 @@ class CsvParserTest {
         assertFailsWith<CsvError.EmptyFile> { parse("\uFEFF\r\n\n\r") }
     }
 
-    private fun parse(text: String): RawCsv = parser.parse(StringReader(text))
+    /** Parses [text] encoded as UTF-8, as the downloaded file would be. */
+    private fun parse(text: String): RawCsv = parser.parse(text.byteInputStream())
 
     private companion object {
         /** The sample file: quoted strings, unquoted integers, CRLF line endings and no final newline. */

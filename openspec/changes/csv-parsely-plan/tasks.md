@@ -29,20 +29,21 @@
 ## 5. CSV parser and repository
 
 - [x] 5.1 Before writing code, discuss the memory open question in design.md with the user. Then implement `CsvParser` (state machine over a `Reader`) with unit tests for every `csv-parsing` scenario, and verify `./gradlew :core:data:testDebugUnitTest` passes
-- [ ] 5.2 Open the file with a strict UTF-8 decoder (`CodingErrorAction.REPORT`) and map `MalformedInputException` to `CsvError.UnsupportedEncoding`, with tests for UTF-8 `Daniëlle` (parsed) and Windows-1252 `Daniëlle` (rejected), and verify the parser tests pass
-- [ ] 5.3 Add adversarial parser tests (quote inside an unquoted field, text after a closing quote, mixed line endings, Unicode/emoji, very long field, 100,000 generated rows within a time bound), fix any failures, and verify all parser tests pass
-- [ ] 5.4 Add the `@IoDispatcher` qualifier in `:core:domain` and its provider in `DispatchersModule`, then implement `CsvRepositoryImpl` (download, then parse on the IO dispatcher) and bind it in `DataModule` with the CSV URL and cache directory, and verify the app builds
-- [ ] 5.5 Add a JVM integration test serving the sample file's exact bytes from MockWebServer through repository and use case, asserting the typed `CsvTable` (column types and values), and verify it passes
+- [x] 5.2 Open the file with a strict UTF-8 decoder (`CodingErrorAction.REPORT`) and map `MalformedInputException` to `CsvError.UnsupportedEncoding`, with tests for UTF-8 `Daniëlle` (parsed) and Windows-1252 `Daniëlle` (rejected), and verify the parser tests pass
+- [ ] 5.3 Change `CsvParser.parse` to take `open: () -> InputStream`: read the file as strict UTF-8, and on `MalformedInputException` read it again as Windows-1252 with the default lenient decoder; remove `CsvError.UnsupportedEncoding`; change the Windows-1252 test to expect `Daniëlle`, and verify the parser tests pass
+- [ ] 5.4 Add adversarial parser tests (quote inside an unquoted field, text after a closing quote, mixed line endings, Unicode/emoji, very long field, 100,000 generated rows within a time bound), fix any failures, and verify all parser tests pass
+- [ ] 5.5 Add the `@IoDispatcher` qualifier in `:core:domain` and its provider in `DispatchersModule`, then implement `CsvRepositoryImpl` (download, then parse on the IO dispatcher) and bind it in `DataModule` with the CSV URL and cache directory, and verify the app builds
+- [ ] 5.6 Add a JVM integration test serving the sample file's exact bytes from MockWebServer through repository and use case, asserting the typed `CsvTable` (column types and values), and verify it passes
 
 ## 6. Viewer screen
 
-- [ ] 6.1 Before writing code, settle the snackbar open question in design.md with the user. Then implement `CsvUiState` (with `Failed(error, canRetry)`), `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry accepted only in `Failed`, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, `canRetry` for each `CsvError` (true for Network and HTTP 401/403/408/429/5xx; false for Malformed, EmptyFile, UnsupportedEncoding, FileTooLarge, other 4xx, Unknown), the error effect, Retry from `Failed`, and Retry ignored while loading, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
+- [ ] 6.1 Before writing code, settle the snackbar open question in design.md with the user. Then implement `CsvUiState` (with `Failed(error, canRetry)`), `CsvEvent`, `CsvEffect` and `CsvViewerViewModel` (load in `init`, Retry accepted only in `Failed`, effects through a `Channel`) with unit tests for Loading → Loaded/NoRows/Failed, `canRetry` for each `CsvError` (true for Network and HTTP 401/403/408/429/5xx; false for Malformed, EmptyFile, FileTooLarge, other 4xx, Unknown), the error effect, Retry from `Failed`, and Retry ignored while loading, and verify `./gradlew :feature:csv-viewer:testDebugUnitTest` passes
 - [ ] 6.2 Implement the stateless `CsvViewerContent` (loading indicator, `LazyColumn` of cards keyed by row index, value formatting (24-hour times; date-times with an offset converted to the device time zone), `Column <n>` labels, no-rows message, error message with a Retry button when `canRetry`) with string resources, and Compose UI tests for each `csv-viewer` display scenario, and verify `./gradlew :feature:csv-viewer:connectedDebugAndroidTest` passes
 - [ ] 6.3 Add the app-level `Scaffold` with the global `SnackbarHost`, connect `CsvViewerScreen` (state collection, effects → snackbar), lock `MainActivity` to portrait, and verify on a device: the sample's three cards appear, airplane mode shows the no-connection message with Retry plus a snackbar, switching dark mode keeps the error screen, and Retry recovers after reconnecting
 
 ## 7. Final checks
 
-- [ ] 7.1 Write `README.md` covering the architecture, the module graph, the parsing and type rules, the known limits (memory, comma only, ISO dates) and how to run the tests, and verify every command in it runs as written
+- [ ] 7.1 Write `README.md` covering the architecture, the module graph, the parsing and type rules, the known limits (memory, comma only, ISO dates, encodings other than UTF-8 and Windows-1252 show garbled text) and how to run the tests, and verify every command in it runs as written
 - [ ] 7.2 Run `./gradlew buildHealth`, fix what it reports, then remove the Dependency Analysis plugin, and verify `./gradlew assembleDebug` succeeds without it
 - [ ] 7.3 Run `./gradlew build connectedDebugAndroidTest` on a clean checkout, verify everything passes, and remove leftover template files (`ExampleUnitTest`, `ExampleInstrumentedTest`)
 
@@ -52,7 +53,6 @@
 - Optional, on its own branch after this change is done (no spec change): rewrite `CsvParser.records()` to produce records one at a time with a `Sequence` (`sequence { }` + `yield`) instead of returning a list, so the user can decide whether to present it.
 - Nice to have, each as its own OpenSpec change after this one is archived (each changes the specs):
   - Multi-format date detection: one format per column picked from common patterns (`dd-MM-yyyy`, `dd/MM/yyyy`, `MM/dd/yyyy`, `dd.MM.yyyy`, `yyyy/MM/dd`, each with an optional time), strict resolving, day-first as the tie-breaker.
-  - Windows-1252 fallback, started by the user: the unsupported-encoding error screen gets a button that parses the already downloaded file again as Windows-1252 (no new download).
 - To rethink, raised in code review of 3.2:
   - Parsing cost in `toCsvTable()`: every INTEGER and DATE cell is parsed twice (once to pick the column type, once to convert it, with `checkNotNull` relying on both passes agreeing), and every date-time value first fails the date-only parse with a thrown `DateTimeParseException` (a date-time with an offset first fails both the date and the local date-time parse). Measured at about 150 ms for 100k date-time cells on the desktop JVM; revisit if loading a large file feels slow on a device.
 - To rethink at the end if there is time, raised in code review of 4.3:

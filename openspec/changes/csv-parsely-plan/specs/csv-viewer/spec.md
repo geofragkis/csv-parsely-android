@@ -66,7 +66,7 @@ The system SHALL show a message saying the file has no rows when the file has a 
 - **THEN** a no-rows message is shown instead of the list
 
 ### Requirement: Errors are shown on the screen
-The system SHALL show, in place of the list, a message for the failure kind (no connection, server error with its code, empty file, malformed file, unsupported encoding, file too large to show, unexpected error) when loading fails. The message SHALL remain visible after a configuration change. A snackbar SHALL also announce the failure once.
+The system SHALL show, in place of the list, a message for the failure kind (no connection, server error with its code, empty file, malformed file, file too large to show, unexpected error) when loading fails. The message SHALL remain visible after a configuration change. A snackbar SHALL also announce the failure once.
 
 #### Scenario: Offline on start
 - **WHEN** loading fails because the device is offline
@@ -81,15 +81,11 @@ The system SHALL show, in place of the list, a message for the failure kind (no 
 - **THEN** the error message and, if offered, the Retry button are still shown
 
 ### Requirement: Retry from the error screen
-The system SHALL offer a Retry button on the error screen only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (malformed, empty, unsupported encoding, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
+The system SHALL offer a Retry button on the error screen only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (malformed, empty, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
 
 #### Scenario: Retry succeeds
 - **WHEN** the user presses Retry and the download now succeeds
 - **THEN** the loading indicator is shown, then the rows
-
-#### Scenario: File is not UTF-8
-- **WHEN** loading fails because the file is not UTF-8 encoded
-- **THEN** the screen says the file's encoding is not supported and offers no Retry
 
 #### Scenario: Malformed file
 - **WHEN** loading fails because the file has an unclosed quote

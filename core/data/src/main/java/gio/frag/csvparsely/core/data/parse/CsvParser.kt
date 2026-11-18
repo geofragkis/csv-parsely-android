@@ -3,7 +3,11 @@ package gio.frag.csvparsely.core.data.parse
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import java.io.BufferedReader
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.Reader
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.MalformedInputException
 
 /**
  * Created by Giorgos Fragkis on 17-11-2026
@@ -64,16 +68,26 @@ class CsvParser {
     }
 
     /**
-     * Reads all of [reader] and returns the header and rows. Does not close [reader].
+     * Reads all of [input] as UTF-8 text and returns the header and rows. Does not close [input].
      *
      * Rows shorter than the header are padded with empty values. A row longer than the header adds unnamed (`""`)
      * columns, and every other row is padded to match.
      *
-     * Throws [CsvError.EmptyFile] when there is no record other than empty lines, and [CsvError.Malformed] when a
-     * quoted field is never closed. Errors from [reader] are passed on unchanged.
+     * Throws [CsvError.UnsupportedEncoding] when the bytes are not valid UTF-8, [CsvError.EmptyFile] when there is no
+     * record other than empty lines, and [CsvError.Malformed] when a quoted field is never closed. Other errors from
+     * [input] are passed on unchanged.
      */
-    fun parse(reader: Reader): RawCsv {
-        val records = records(reader.buffered())
+    fun parse(input: InputStream): RawCsv {
+        // REPORT makes invalid bytes, such as a Windows-1252 file, throw a MalformedInputException while reading,
+        // instead of the default REPLACE, which would show them as � without telling anyone
+        val decoder = Charsets.UTF_8.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+        val reader = InputStreamReader(input, decoder)
+        val records = runCatching { records(reader.buffered()) }
+            .getOrElse { error ->
+                throw if (error is MalformedInputException) CsvError.UnsupportedEncoding(error) else error
+            }
         // The header is the first record that is not an empty line
         val headerIndex = records.indexOfFirst { it.isNotEmpty() }
         if (headerIndex == -1) throw CsvError.EmptyFile()
