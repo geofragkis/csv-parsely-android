@@ -6,6 +6,10 @@ import org.junit.Test
 import java.nio.charset.Charset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.measureTime
 
 /**
  * Created by Giorgos Fragkis on 18-11-2026
@@ -235,6 +239,90 @@ class CsvParserTest {
         val expectedRows = listOf(listOf("Daniëlle"))
 
         assertEquals(expectedRows, csv.rows)
+    }
+
+    // Unusual input
+
+    @Test
+    fun `quote inside an unquoted field is kept as text`() {
+        // The file:
+        // x,y
+        // ab"c,d
+        val csv = parse("x,y\nab\"c,d")
+        val expectedRow = listOf("ab\"c", "d")
+
+        assertEquals(expectedRow, csv.rows.single())
+    }
+
+    @Test
+    fun `text after a closing quote is added to the field`() {
+        // The file:
+        // x,y
+        // "ab"cd,e
+        val csv = parse("x,y\n\"ab\"cd,e")
+        val expectedRow = listOf("abcd", "e")
+
+        assertEquals(expectedRow, csv.rows.single())
+    }
+
+    @Test
+    fun `mixed line endings in one file are all read`() {
+        val csv = parse("a,b\r\n1,2\n3,4\r5,6")
+        val expectedRows = listOf(
+            listOf("1", "2"),
+            listOf("3", "4"),
+            listOf("5", "6"),
+        )
+
+        assertEquals(expectedRows, csv.rows)
+    }
+
+    @Test
+    fun `accented letters and emoji are kept`() {
+        val csv = parse("name,mood\nZoë,😀👍🏽")
+        val expectedRow = listOf("Zoë", "😀👍🏽")
+
+        assertEquals(expectedRow, csv.rows.single())
+    }
+
+    @Test
+    fun `very long field is read whole`() {
+        val longValue = "x".repeat(1_000_000)
+        val csv = parse("note\n\"$longValue\"")
+
+        assertEquals(longValue, csv.rows.single().single())
+    }
+
+    @Test
+    fun `100,000 rows are parsed within a few seconds`() {
+        val text = buildString {
+            append("id,name,date\r\n")
+            repeat(100_000) { index ->
+                append("$index,\"Name $index\",2001-04-20T10:15:00\r\n")
+            }
+        }
+
+        lateinit var csv: RawCsv
+        val duration = measureTime { csv = parse(text) }
+
+        assertEquals(100_000, csv.rows.size)
+        assertTrue(duration < 5.seconds, "took $duration")
+    }
+
+    @Test
+    fun `1,000,000 rows are parsed within a few seconds`() {
+        val text = buildString {
+            append("id,name,date\r\n")
+            repeat(1_000_000) { index ->
+                append("$index,\"Name $index\",2001-04-20T10:15:00\r\n")
+            }
+        }
+
+        lateinit var csv: RawCsv
+        val duration = measureTime { csv = parse(text) }
+
+        assertEquals(1_000_000, csv.rows.size)
+        assertTrue(duration < 5.seconds, "took $duration")
     }
 
     // Reject files that cannot be parsed
