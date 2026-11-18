@@ -55,3 +55,5 @@
   - Windows-1252 fallback, started by the user: the unsupported-encoding error screen gets a button that parses the already downloaded file again as Windows-1252 (no new download).
 - To rethink, raised in code review of 3.2:
   - Parsing cost in `toCsvTable()`: every INTEGER and DATE cell is parsed twice (once to pick the column type, once to convert it, with `checkNotNull` relying on both passes agreeing), and every date-time value first fails the date-only parse with a thrown `DateTimeParseException` (a date-time with an offset first fails both the date and the local date-time parse). Measured at about 150 ms for 100k date-time cells on the desktop JVM; revisit if loading a large file feels slow on a device.
+- To rethink at the end if there is time, raised in code review of 4.3:
+  - Download errors: every `IOException` from the request or the copy becomes `CsvError.Network`, also a local file failure (cache folder can't be created, disk full). The screen then says "no connection" and offers a Retry that keeps failing. Decide whether local file failures should get their own kind (for example `Unknown`, without Retry).
