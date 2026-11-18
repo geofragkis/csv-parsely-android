@@ -83,7 +83,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 `CsvRepository.load(): RawCsv` (download + parse, on the IO dispatcher). `LoadCsvTableUseCase` calls it, then `RawCsv.toCsvTable()` (on the default dispatcher) does one pass per column to pick the type and a second pass to convert. The result is `Result<CsvTable>`.
 
 - INTEGER: trimmed, `^[+-]?(0|[1-9][0-9]*)$` and `toLongOrNull() != null`.
-- DATE: trimmed, then `java.time`'s built-in ISO parsers, tried in order: `LocalDate.parse`, `LocalDateTime.parse`, `OffsetDateTime.parse`. They are strict by default: dates, times and offsets that don't exist (`2023-02-30`, `24:00`, `+25:00`) are rejected instead of adjusted. A cell keeps what the file gave: a date-time stays a date-time (midnight included), a date-only value has no time, and a value with an offset keeps it.
+- DATE: trimmed, then `java.time`'s built-in ISO parsers, tried in order: `LocalDate.parse`, `LocalDateTime.parse`, `OffsetDateTime.parse`. They are strict by default: dates, times and offsets that don't exist (`2023-02-30`, `24:00`, `+25:00`) are rejected instead of adjusted. Only years 1 to 9999 count as dates: outside them a year can't be shown correctly (year 0000 would show as year 1) or fails when moved to another time zone. A cell keeps what the file gave: a date-time stays a date-time (midnight included), a date-only value has no time, and a value with an offset keeps it.
 - Otherwise TEXT, keeping the raw string.
 
 `CellValue` is a sealed interface: `Text(String)`, `Integer(Long)`, `Date(date: LocalDate, time: LocalTime?, offset: ZoneOffset?)`, `Empty`. `time == null` means the file gave only a date, which keeps a date-only value apart from a real midnight. `offset` is set only together with a time.

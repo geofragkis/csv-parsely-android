@@ -49,7 +49,7 @@ The system SHALL type a column as INTEGER when every non-empty value, ignoring s
 - **THEN** the column is TEXT
 
 ### Requirement: Date columns
-The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 date (`yyyy-MM-dd`), date-time (`yyyy-MM-ddTHH:mm[:ss[.fraction]]`) or date-time followed by an ISO-8601 offset (such as `Z` or `±HH:mm`). A date value SHALL keep its time and offset when given, and SHALL record whether the file gave a time at all, so a date-only value is never confused with midnight.
+The system SHALL type a column as DATE when every non-empty value, ignoring surrounding whitespace, is an ISO-8601 date, date-time or date-time with an offset, as read by `java.time`'s ISO parsers, with a year from 1 to 9999 (for example `2001-04-20`, `2001-04-20T10:15:30` or `2001-04-20T10:15:30+02:00`). A date value SHALL keep its time and offset when given, and SHALL record whether the file gave a time at all, so a date-only value is never confused with midnight.
 
 #### Scenario: Date-time values
 - **WHEN** a column holds `1978-01-02T00:00:00`
@@ -70,6 +70,10 @@ The system SHALL type a column as DATE when every non-empty value, ignoring surr
 #### Scenario: Values with and without an offset
 - **WHEN** a column holds `2001-04-20`, `1978-01-02T08:30:00` and `2001-04-20T10:15+02:00`
 - **THEN** the column is DATE and each value keeps its own form
+
+#### Scenario: Year outside 1 to 9999
+- **WHEN** a column holds `0000-01-01` or `+10000-01-01`
+- **THEN** the column is TEXT
 
 #### Scenario: Invalid offset
 - **WHEN** a column holds `2001-04-20T10:15+25:00`

@@ -13,6 +13,12 @@ import java.time.OffsetDateTime
 private val INTEGER_PATTERN = Regex("[+-]?(0|[1-9][0-9]*)")
 
 /**
+ * The years a date is accepted for: the four-digit years from 0001 to 9999. Outside them a date can't be shown
+ * correctly: year 0000 would show as year 1, and a year such as +999999999 fails when it is moved to another time zone.
+ */
+private val SUPPORTED_YEARS = 1..9999
+
+/**
  * Created by Giorgos Fragkis on 16-11-2026
  *
  * Gives each column one type, decided from all of its non-empty values, and converts every cell to that type.
@@ -115,40 +121,45 @@ private fun String.toIntegerOrNull(): Long? =
     if (INTEGER_PATTERN.matches(this)) toLongOrNull() else null
 
 /**
- * Reads an ISO date, date-time or date-time with an offset, or returns null. Uses the strict ISO parsers of
- * `java.time`, which reject dates and times that don't exist, such as `2023-02-30` or `24:00`.
+ * Reads an ISO date, date-time or date-time with an offset, or returns null when the text is not one.
  *
- * For example: `"2001-04-20"` returns `Date(2001-04-20, time = null, offset = null)`, `"1978-01-02T00:00:00"` returns
- * `Date(1978-01-02, time = 00:00, offset = null)`, `"2001-04-20T10:15+02:00"` returns
- * `Date(2001-04-20, time = 10:15, offset = +02:00)`, and `"2023-02-30"` returns null.
+ * For example: `"2001-04-20"` returns `Date(2001-04-20, time = null, offset = null)`, while `"2023-02-30"` and
+ * `"0000-01-01"` return null.
  */
-private fun String.toDateOrNull(): CellValue.Date? {
-    // Each parser throws when the text is not in its format, so the next one is tried
-    runCatching { LocalDate.parse(this) }.getOrNull()
-        ?.let { date ->
-            return CellValue.Date(
-                date = date,
-                time = null,
-                offset = null,
-            )
-        }
+private fun String.toDateOrNull(): CellValue.Date? = parseIsoDate().getOrNull()
 
-    runCatching { LocalDateTime.parse(this) }.getOrNull()
-        ?.let { dateTime ->
-            return CellValue.Date(
-                date = dateTime.toLocalDate(),
-                time = dateTime.toLocalTime(),
-                offset = null,
-            )
-        }
-
-    runCatching { OffsetDateTime.parse(this) }.getOrNull()
-        ?.let { dateTime ->
-            return CellValue.Date(
-                date = dateTime.toLocalDate(),
-                time = dateTime.toLocalTime(),
-                offset = dateTime.offset,
-            )
-        }
-    return null
-}
+/**
+ * Reads an ISO date, date-time or date-time with an offset whose year is in [SUPPORTED_YEARS]. Uses the strict ISO
+ * parsers of `java.time`, which reject dates and times that don't exist, such as `2023-02-30` or `24:00`.
+ *
+ * For example: `"2001-04-20"` gives `Date(2001-04-20, time = null, offset = null)`, `"1978-01-02T00:00:00"` gives
+ * `Date(1978-01-02, time = 00:00, offset = null)`, `"2001-04-20T10:15+02:00"` gives
+ * `Date(2001-04-20, time = 10:15, offset = +02:00)`, and `"2023-02-30"` and `"0000-01-01"` give a failure.
+ */
+private fun String.parseIsoDate(): Result<CellValue.Date> =
+    // Each parser fails when the text is not in its format, so the next one is tried
+    runCatching {
+        CellValue.Date(
+            date = LocalDate.parse(this),
+            time = null,
+            offset = null,
+        )
+    }.recoverCatching {
+        val dateTime = LocalDateTime.parse(this)
+        CellValue.Date(
+            date = dateTime.toLocalDate(),
+            time = dateTime.toLocalTime(),
+            offset = null,
+        )
+    }.recoverCatching {
+        val dateTime = OffsetDateTime.parse(this)
+        CellValue.Date(
+            date = dateTime.toLocalDate(),
+            time = dateTime.toLocalTime(),
+            offset = dateTime.offset,
+        )
+    }.mapCatching { date ->
+        // The parsers also accept years such as 0000 or +999999999, which can't be shown correctly
+        require(date.date.year in SUPPORTED_YEARS)
+        date
+    }

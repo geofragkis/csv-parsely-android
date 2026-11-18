@@ -342,6 +342,20 @@ class ColumnTypeInferenceTest {
     }
 
     @Test
+    fun `years outside 0001 to 9999 are text`() {
+        val values = listOf("0000-01-01", "-0001-01-01", "+10000-01-01", "+999999999-12-31T23:59-18:00")
+        val expectedType = ColumnType.TEXT
+
+        values.forEach { value ->
+            assertEquals(
+                expectedType,
+                singleColumnCSVTable(value).singleColumnTableType(),
+                "for \"$value\"",
+            )
+        }
+    }
+
+    @Test
     fun `year one is a date`() {
         val table = singleColumnCSVTable("0001-01-01")
         val expectedType = ColumnType.DATE
