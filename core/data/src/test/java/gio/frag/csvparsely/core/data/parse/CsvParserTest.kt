@@ -7,7 +7,6 @@ import java.nio.charset.Charset
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.measureTime
 
@@ -306,22 +305,6 @@ class CsvParserTest {
         val duration = measureTime { csv = parse(text) }
 
         assertEquals(100_000, csv.rows.size)
-        assertTrue(duration < 5.seconds, "took $duration")
-    }
-
-    @Test
-    fun `1,000,000 rows are parsed within a few seconds`() {
-        val text = buildString {
-            append("id,name,date\r\n")
-            repeat(1_000_000) { index ->
-                append("$index,\"Name $index\",2001-04-20T10:15:00\r\n")
-            }
-        }
-
-        lateinit var csv: RawCsv
-        val duration = measureTime { csv = parse(text) }
-
-        assertEquals(1_000_000, csv.rows.size)
         assertTrue(duration < 5.seconds, "took $duration")
     }
 

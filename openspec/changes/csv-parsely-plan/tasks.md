@@ -34,6 +34,7 @@
 - [x] 5.4 Add adversarial parser tests (quote inside an unquoted field, text after a closing quote, mixed line endings, Unicode/emoji, very long field, 100,000 generated rows within a time bound), fix any failures, and verify all parser tests pass
 - [x] 5.5 Add the `@IoDispatcher` qualifier in `:core:domain` and its provider in `DispatchersModule`, then implement `CsvRepositoryImpl` (download, then parse on the IO dispatcher) and bind it in `DataModule` with the CSV URL and cache directory, and verify the app builds
 - [x] 5.6 Add a JVM integration test serving the sample file's exact bytes from MockWebServer through repository and use case, asserting the typed `CsvTable` (column types and values), and verify it passes
+- [ ] 5.7 Add an instrumented test in `:core:data` that writes a generated 100,000-row CSV to the device's cache folder and runs the real `CsvParser` and `toCsvTable()` on it, asserting the row count and a generous time limit, so memory and speed are checked on a real device; add the AndroidX test dependencies `:core:data` needs, and verify `./gradlew :core:data:connectedDebugAndroidTest` passes on an emulator or phone
 
 ## 6. Viewer screen
 

@@ -91,13 +91,13 @@ class CsvParser {
             open().use { input ->
                 records(InputStreamReader(input, utf8Decoder).buffered())
             }
-        }.recoverCatching { error ->
+        }.getOrElse { error ->
             if (error !is MalformedInputException) throw error
             // A plain charset never fails, it shows unknown bytes as �
             open().use { input ->
                 records(InputStreamReader(input, WINDOWS_1252).buffered())
             }
-        }.getOrThrow()
+        }
 
         // The header is the first record that is not an empty line
         val headerIndex = records.indexOfFirst { it.isNotEmpty() }

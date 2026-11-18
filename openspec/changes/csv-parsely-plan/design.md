@@ -136,6 +136,7 @@ Hilt with one `NetworkModule` (`OkHttpClient` with timeouts), one `DataModule` (
 | `RawCsv.toCsvTable()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day, date-times with an offset (`Z`, positive, negative), an invalid offset |
 | `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection gives a network error, cancellation while a read is blocked stops at once |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
+| Parser + type inference on a device | instrumented (emulator or phone) | a generated 100k-row file parsed and typed within a time limit, to check memory and speed where the heap is smaller than on the JVM |
 | `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
 | `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, Retry from `Failed`, Retry ignored while loading |
 | `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, no-rows message, error message with and without Retry button |
