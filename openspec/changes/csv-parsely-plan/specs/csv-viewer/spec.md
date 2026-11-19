@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Shows the downloaded and typed CSV data on a single screen, with clear loading and empty states, and errors in a snackbar.
+Shows the downloaded and typed CSV data on a single screen in the Rabobank colors, with image URLs shown as images, clear loading and empty states, and errors in a snackbar.
 
 ## ADDED Requirements
 
@@ -18,15 +18,41 @@ The system SHALL start downloading and parsing the CSV when the screen opens, an
 - **THEN** the screen keeps its current state and no new download starts
 
 ### Requirement: One card per row
-The system SHALL show each data row as a card in a vertically scrolling list, in file order. Each card SHALL list every column as its name followed by the formatted value. Cards SHALL NOT react to taps.
+The system SHALL show each data row as a card in a vertically scrolling list, in file order. Each card SHALL list every column, except image values, as its name with the formatted value next to it, in file order. Image values SHALL be shown on the left of the card (see "Image values"). Cards SHALL NOT react to taps.
 
 #### Scenario: Sample file
 - **WHEN** the sample file has loaded
-- **THEN** three cards are shown, and the first shows `First name` `Theo`, `Sur name` `Jansen`, `Issue count` `5`, `Date of birth` and `avatar` with their values
+- **THEN** three cards are shown, and the first shows the `avatar` image on the left and `First name` `Theo`, `Sur name` `Jansen`, `Issue count` `5` and `Date of birth` `Jan 2, 1978, 00:00` on the right
 
 #### Scenario: Unnamed column
 - **WHEN** a column has no name in the header
 - **THEN** its values are labelled `Column <n>`, where n is its 1-based position
+
+### Requirement: Image values
+The system SHALL show a TEXT value as an image when it is an `http` or `https` URL whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` (ignoring case). The image SHALL be loaded from the URL and shown on the left of the card. Until the image has loaded, and when it fails to load, a default avatar SHALL be shown in its place. Any other TEXT value, including a URL to something that is not an image, SHALL be shown as text.
+
+#### Scenario: Image URL
+- **WHEN** a value is `https://api.multiavatar.com/2cdf5db9b4dee297b7.png`
+- **THEN** the image is shown on the left of the card instead of the URL
+
+#### Scenario: Image URL with a query
+- **WHEN** a value is `https://example.com/photo.JPG?size=2`
+- **THEN** it is shown as an image
+
+#### Scenario: URL that is not an image
+- **WHEN** a value is `https://example.com/report.pdf`
+- **THEN** it is shown as text, with its column name
+
+#### Scenario: Image fails to load
+- **WHEN** the image URL answers with an error or the device is offline
+- **THEN** the default avatar is shown in its place, and the rest of the card is unchanged
+
+### Requirement: Rabobank colors
+The system SHALL use the Rabobank color scheme (blue `#0060AE`, orange `#F76300`) in light and dark mode, and SHALL NOT replace it with colors taken from the device's wallpaper.
+
+#### Scenario: Android 12 or newer
+- **WHEN** the app runs on a device with dynamic colors (Android 12+)
+- **THEN** the screen still shows the Rabobank colors
 
 ### Requirement: Format values by type
 The system SHALL show INTEGER values as plain digits with a sign for negatives, TEXT values unchanged, and empty values as a dash. DATE values SHALL be shown with the date in the device's locale format: a value that has a time in the file SHALL always show that time in 24-hour format (`HH:mm`, midnight as `00:00`), and a date-only value SHALL show only the date.

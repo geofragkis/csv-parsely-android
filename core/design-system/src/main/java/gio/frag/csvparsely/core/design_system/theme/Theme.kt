@@ -1,35 +1,42 @@
 package gio.frag.csvparsely.core.design_system.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = RabobankBlue,
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primaryContainer = RabobankBlue,
+    onPrimaryContainer = Color.White,
+    tertiary = RabobankOrange,
+    background = Color(0xFFF4F6F9),
+    onBackground = Color(0xFF191C20),
+    surfaceContainerLow = Color.White,
+    onSurface = Color(0xFF191C20),
+    onSurfaceVariant = Color(0xFF4A5361),
+    inverseSurface = Color(0xFF2E3135),
+    inverseOnSurface = Color(0xFFF0F1F4),
+    inversePrimary = Color(0xFFA3C9FF),
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = Color(0xFFA3C9FF),
+    onPrimary = Color(0xFF00315C),
+    primaryContainer = Color(0xFF004A86),
+    onPrimaryContainer = Color(0xFFD4E3FF),
+    tertiary = Color(0xFFFF9A5C),
+    background = Color(0xFF111418),
+    onBackground = Color(0xFFE2E6EC),
+    surfaceContainerLow = Color(0xFF1D2127),
+    onSurface = Color(0xFFE2E6EC),
+    onSurfaceVariant = Color(0xFFAEB6C2),
+    inverseSurface = Color(0xFFE2E6EC),
+    inverseOnSurface = Color(0xFF2E3135),
+    inversePrimary = RabobankBlue,
 )
 
 /**
@@ -38,23 +45,11 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun CsvParselyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }

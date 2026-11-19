@@ -118,6 +118,41 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 - Values are formatted in the card composable: the date with `DateTimeFormatter.ofLocalizedDate(MEDIUM)`, remembered per locale, and a time, when there is one, with `DateTimeFormatter.ofPattern("HH:mm")`, joined as `<date>, <time>`, so times are always 24-hour (midnight included). A value with an offset is first converted with `OffsetDateTime.of(date, time, offset).atZoneSameInstant(ZoneId.systemDefault())`. Integers are shown with `toString()` (no grouping, so IDs and years read correctly).
 - Compose strong skipping (on by default with the Kotlin 2.x Compose compiler) means we don't need immutable collection libraries. The UI models are `@Immutable` data classes.
 
+### Theme: Rabobank colors
+
+`:core:design-system` replaces the template's purple with Rabobank blue `#0060AE` and orange `#F76300`. Rabobank publishes no official hex values; these come from public logo color listings. `CsvParselyTheme` loses its `dynamicColor` parameter and the Android 12 check, so the wallpaper never replaces the brand colors. The template's commented-out blocks go. Typography stays the system font, since Rabobank's own font isn't public.
+
+| Role | Light | Dark | Used for |
+|---|---|---|---|
+| `primaryContainer` / `onPrimaryContainer` | `#0060AE` / `#FFFFFF` | `#004A86` / `#D4E3FF` | top bar and its title |
+| `primary` / `onPrimary` | `#0060AE` / `#FFFFFF` | `#A3C9FF` / `#00315C` | Material default for accents |
+| `tertiary` | `#F76300` | `#FF9A5C` | loading indicator (white text on this orange is too faint, so orange is never behind text) |
+| `background` / `onBackground` | `#F4F6F9` / `#191C20` | `#111418` / `#E2E6EC` | screen / text placed straight on it |
+| `surfaceContainerLow` | `#FFFFFF` | `#1D2127` | cards (`ElevatedCard` default) |
+| `onSurface` / `onSurfaceVariant` | `#191C20` / `#4A5361` | `#E2E6EC` / `#AEB6C2` | values and messages / column names, empty state |
+| `inverseSurface` / `inverseOnSurface` / `inversePrimary` | `#2E3135` / `#F0F1F4` / `#A3C9FF` | `#E2E6EC` / `#2E3135` / `#0060AE` | snackbar, its message, its Retry action (Material `Snackbar` defaults) |
+
+### Screen layout
+
+The approved mockups are the reference. The screen's own `Scaffold` holds a top bar titled `CsvParsely` (`primaryContainer`), the content and the `SnackbarHost`. If `TopAppBar` still needs `@OptIn(ExperimentalMaterial3Api::class)` in our Material3 version, the bar is a plain `Surface` with a `Text`, so no experimental API is used.
+
+- **Loading**: a `CircularProgressIndicator` in `tertiary`, centered.
+- **Card**: an `ElevatedCard` with 12dp padding, 8dp between cards and 16dp side margins. A `Row` holds the image values on the left (48dp each, one under the other) and, on the right, one line per other column: the column name in `bodyMedium` / `onSurfaceVariant` in a 92dp column, and the value next to it in `bodyMedium` with medium weight. A long name or value wraps within its column. A row with no image value has no left part.
+- **Image values**: a TEXT value is an image when `Uri.parse(value)` has the scheme `http` or `https` and its path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` (ignoring case). `Uri.parse` never throws, and checking the path, not the whole string, keeps `photo.png?size=2` an image. An internal `isImageUrl(text)` in `:feature:csv-viewer` holds this rule. Coil's `AsyncImage` shows the image at 48dp, scaled to fit, with no clip or container, and the column name as its content description. One vector drawable, a light blue circle with a blue person (`drawable-night` holds the dark version), is passed as both `placeholder` and `error`, so loading and a failed image look the same. Coil's OkHttp network module does the download; Coil's default memory and disk caches are kept.
+- **Empty state**: the Material Symbols "Inbox" icon (an empty tray) as a vector drawable, 64dp, in `onSurfaceVariant`, above "Nothing to show" in `titleMedium`, centered. It's shown when nothing is loading and there are no rows.
+- **Snackbar**: Material `Snackbar` with its default (inverse) colors, `SnackbarDuration.Indefinite`, Retry as its action when `canRetry`. Messages, one string resource each:
+
+| `CsvError` | Message | Retry |
+|---|---|---|
+| `Network` | No connection. Check your internet and try again. | yes |
+| `Http` 408/429/5xx | Server error (`code`). | yes |
+| `Http` other codes | Server error (`code`). | no |
+| `Storage` | The file couldn't be saved on the phone. | no |
+| `EmptyFile` | The file is empty. | no |
+| `Malformed(line)` | The file is malformed: a quote opened on line `line` is never closed. | no |
+| `FileTooLarge` | The file is too large to show. | no |
+| `Generic` | Something went wrong. | no |
+
 ### Dependency injection
 
 All Hilt modules live in `:app`, the only module that sees both `:core:data` and `:core:domain`: `NetworkModule` (`OkHttpClient` with timeouts), `DispatchersModule` (`@IoDispatcher`, `@DefaultDispatcher`) and `DataModule`. `DataModule` provides `CsvDownloader` (with the cache directory) and `CsvRepository`, a `@Singleton` `CsvRepositoryImpl` built with the CSV URL, the downloader and a `CsvParser`, so one repository owns `download.csv`. Loads don't overlap because the ViewModel only starts a new one after the previous one failed (see UI). `LoadCsvTableUseCase` is created by Hilt through its `@Inject` constructor. `:core:data` has no Hilt annotations. KSP is used for annotation processing.
@@ -138,11 +173,13 @@ All Hilt modules live in `:app`, the only module that sees both `:core:data` and
 | Parser + type inference on a device | instrumented (emulator or phone) | a generated 100k-row file parsed and typed within a time limit, to check memory and speed where the heap is smaller than on the JVM |
 | `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Generic`, cancellation is rethrown and not turned into a failure |
 | `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | starts loading; rows, no rows, and failure (with and without Retry) states; Retry after a failure; Retry ignored while loading |
-| `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, empty state for no rows and for a failure, error snackbar with and without Retry |
+| `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, an image URL shown as an image (found by its content description) and not as text, a non-image URL shown as text, empty state for no rows and for a failure, error snackbar with and without Retry |
 
 ## Risks / Trade-offs
 
 - [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though, as raw text; cells are converted only when a row is shown, so there is no second, typed copy of the table. A file too large for memory fails with `FileTooLarge`, and this is noted as a known limit; pagination or a database would be the next step.
+
+- [The sample's avatar URLs answer 404] → Every card then shows the default avatar. That's the designed fallback, so the screen still looks intended.
 
 ## Open Questions
 
