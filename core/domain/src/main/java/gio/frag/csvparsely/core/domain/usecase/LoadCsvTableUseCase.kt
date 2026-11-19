@@ -22,7 +22,7 @@ class LoadCsvTableUseCase @Inject constructor(
 
     /**
      * Returns the typed table, or a failure holding a [CsvError]. Running out of memory becomes
-     * [CsvError.FileTooLarge], and an unexpected exception becomes [CsvError.Unknown].
+     * [CsvError.FileTooLarge], and an unexpected exception becomes [CsvError.Generic].
      * A canceled load is not a failure: its `CancellationException` is rethrown.
      */
     suspend operator fun invoke(): Result<CsvTable> {
@@ -39,7 +39,7 @@ class LoadCsvTableUseCase @Inject constructor(
                     is CsvError -> Result.failure(exception)
                     is CancellationException -> throw exception
                     is OutOfMemoryError -> Result.failure(CsvError.FileTooLarge(exception))
-                    else -> Result.failure(CsvError.Unknown(exception))
+                    else -> Result.failure(CsvError.Generic(exception))
                 }
             }
         )

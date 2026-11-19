@@ -70,7 +70,7 @@ The system SHALL show an empty state, an icon with the message "Nothing to show"
 - **THEN** the rows stay visible, the error snackbar is shown, and the empty state is not shown
 
 ### Requirement: Errors are shown in a snackbar
-The system SHALL show, when loading fails, a snackbar with a message for the failure kind (no connection, server error with its code, empty file, malformed file, file too large to show, unexpected error). The snackbar SHALL stay on screen as long as the failure is shown, and SHALL be shown again after a configuration change.
+The system SHALL show, when loading fails, a snackbar with a message for the failure kind (no connection, server error with its code, file couldn't be saved on the phone, empty file, malformed file, file too large to show, unexpected error). The snackbar SHALL stay on screen as long as the failure is shown, and SHALL be shown again after a configuration change.
 
 #### Scenario: Offline on start
 - **WHEN** loading fails because the device is offline
@@ -85,7 +85,7 @@ The system SHALL show, when loading fails, a snackbar with a message for the fai
 - **THEN** the snackbar with its message and, if offered, its Retry action is still shown
 
 ### Requirement: Retry from the error snackbar
-The system SHALL offer a Retry action on the error snackbar only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (malformed, empty, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
+The system SHALL offer a Retry action on the error snackbar only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (storage, malformed, empty, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
 
 #### Scenario: Retry succeeds
 - **WHEN** the user presses Retry and the download now succeeds

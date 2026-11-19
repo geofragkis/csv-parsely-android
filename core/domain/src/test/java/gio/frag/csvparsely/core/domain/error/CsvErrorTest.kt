@@ -1,6 +1,7 @@
 package gio.frag.csvparsely.core.domain.error
 
 import org.junit.Test
+import java.io.IOException
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -33,10 +34,11 @@ class CsvErrorTest {
             CsvError.Http(400),
             CsvError.Http(404),
             CsvError.Http(499),
+            CsvError.Storage(cause = IOException()),
             CsvError.EmptyFile(),
             CsvError.Malformed(line = 4),
             CsvError.FileTooLarge(cause = OutOfMemoryError()),
-            CsvError.Unknown(cause = IllegalStateException()),
+            CsvError.Generic(cause = IllegalStateException()),
         )
 
         errors.forEach { error ->

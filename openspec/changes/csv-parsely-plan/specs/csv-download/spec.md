@@ -25,11 +25,15 @@ The system SHALL stop a download as soon as it is cancelled, also while it is wa
 - **THEN** the download stops at once
 
 ### Requirement: Report download failures by kind
-The system SHALL report a failed download as one of: a network failure, an unsuccessful HTTP status (including the status code), or an unexpected error. Any failure while receiving or saving the body SHALL be reported as a network failure.
+The system SHALL report a failed download as one of: a network failure, an unsuccessful HTTP status (including the status code), a storage failure, or an unexpected error. When the file cannot be created or written on the device, the download SHALL fail with a storage error. A failure while receiving the body SHALL be reported as a network failure.
+
+#### Scenario: The file can't be created
+- **WHEN** the file cannot be created (for example the download folder can't be made)
+- **THEN** the download fails with a storage error
 
 #### Scenario: Saving the file fails
-- **WHEN** writing the file fails (for example the storage is full)
-- **THEN** the download fails with a network error
+- **WHEN** writing the file fails during the download (for example the storage is full)
+- **THEN** the download fails with a storage error
 
 #### Scenario: Server returns an error status
 - **WHEN** the server responds with status 404

@@ -132,12 +132,12 @@ class CsvDownloaderTest {
     }
 
     @Test
-    fun `saving the file fails with a network error`() = runTest {
+    fun `a file that can't be created fails with a storage error`() = runTest {
         server.enqueue(MockResponse.Builder().body(SAMPLE_CSV).build())
         // A regular file where the download folder should be, so the file cannot be created
         directory.writeText("")
 
-        assertFailsWith<CsvError.Network> { downloader.download(url()) }
+        assertFailsWith<CsvError.Storage> { downloader.download(url()) }
     }
 
     /**
