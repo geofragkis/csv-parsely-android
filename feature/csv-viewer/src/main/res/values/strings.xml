@@ -1,0 +1,13 @@
+<resources>
+    <string name="feature_csv_viewer_title">CsvParsely</string>
+    <string name="feature_csv_viewer_unnamed_column">Column %1$d</string>
+    <string name="feature_csv_viewer_empty">Nothing to show</string>
+    <string name="feature_csv_viewer_retry">Retry</string>
+    <string name="feature_csv_viewer_error_network">No connection. Check your internet and try again.</string>
+    <string name="feature_csv_viewer_error_http">Server error (%1$d).</string>
+    <string name="feature_csv_viewer_error_storage">The file couldn\'t be saved on the phone.</string>
+    <string name="feature_csv_viewer_error_empty_file">The file is empty.</string>
+    <string name="feature_csv_viewer_error_malformed">The file is malformed: a quote opened on line %1$d is never closed.</string>
+    <string name="feature_csv_viewer_error_file_too_large">The file is too large to show.</string>
+    <string name="feature_csv_viewer_error_generic">Something went wrong.</string>
+</resources>

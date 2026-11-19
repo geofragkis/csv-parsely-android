@@ -2,8 +2,11 @@
 .gradle
 /local.properties
 /.idea/*
-/build
+build/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# Generated OpenSpec commands and skills for Claude Code, kept locally only
+.claude/
