@@ -44,4 +44,4 @@
 
 - [x] 7.1 Write `README.md` covering the architecture, the module graph, the parsing and type rules, the known limits (memory, comma only, ISO dates, encodings other than UTF-8 and Windows-1252 show garbled text, a row that fails to convert while scrolling is not handled and crashes the app), how to run the tests, and a short note on how AI was used, and verify every command in it runs as written
 - [x] 7.2 Run `./gradlew buildHealth`, fix what it reports, then remove the Dependency Analysis plugin, and verify `./gradlew assembleDebug` succeeds without it
-- [ ] 7.3 Remove the `:app` test dependencies left from the template (it has no tests), then run `./gradlew build connectedDebugAndroidTest` on a clean checkout and verify everything passes
+- [x] 7.3 Remove the `:app` test dependencies left from the template (it has no tests), then run `./gradlew build connectedDebugAndroidTest` on a clean checkout and verify everything passes

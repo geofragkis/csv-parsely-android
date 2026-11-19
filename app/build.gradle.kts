@@ -29,6 +29,4 @@ dependencies {
     implementation(projects.core.domain)
     implementation(projects.core.designSystem)
     implementation(libs.okhttp)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
 }
