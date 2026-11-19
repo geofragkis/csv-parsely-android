@@ -1,0 +1,5 @@
+<resources>
+    <string name="feature_csv_viewer_title">CsvParsely</string>
+    <string name="feature_csv_viewer_unnamed_column">Column %1$d</string>
+    <string name="feature_csv_viewer_empty">Nothing to show</string>
+</resources>
