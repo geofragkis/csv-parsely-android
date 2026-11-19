@@ -37,16 +37,32 @@ The feature never depends on `:core:data`: only `:app` sees both sides, and bind
 
 ### Data flow
 
-```
-CsvViewerScreen --CsvEvent.Retry--> CsvViewerViewModel --> LoadCsvTableUseCase --> CsvRepository
-      ^                                    |                                          (download, then parse)
-      +------ StateFlow<CsvUiState> -------+
+```mermaid
+sequenceDiagram
+    participant Screen as CsvViewerScreen
+    participant ViewModel as CsvViewerViewModel
+    participant UseCase as LoadCsvTableUseCase
+    participant Repository as CsvRepositoryImpl
+    participant Downloader as CsvDownloader
+    participant Parser as CsvParser
+
+    Note over Screen,ViewModel: init, or CsvEvent.Retry after a failure
+    ViewModel->>UseCase: invoke()
+    UseCase->>Repository: load()
+    Repository->>Downloader: download(url)
+    Downloader-->>Repository: download.csv
+    Repository->>Parser: parse()
+    Parser-->>Repository: RawCsv
+    Repository-->>UseCase: RawCsv
+    UseCase->>UseCase: toCsvTable()
+    UseCase-->>ViewModel: Result#lt;CsvTable#gt;
+    ViewModel-->>Screen: StateFlow#lt;CsvUiState#gt;
 ```
 
 1. **Download**: `CsvDownloader` copies the response body into `cacheDir/csv/download.csv`, replacing the previous
    file. A canceled download cancels the OkHttp call, so a blocked read stops at once. No temporary file is needed:
-   a failed download throws, so its partial file is never parsed, and only one load runs at a time (Retry is accepted
-   only after a failure), so a canceled download can't write into the file of a newer one.
+   a failed download throws, so its partial file is never parsed, and only one load per screen runs at a time (Retry is
+   accepted only after a failure), so two downloads of the same screen never write the file together.
 2. **Parse**: `CsvParser` reads the file character by character into a header and rows of raw text.
 3. **Type**: `LoadCsvTableUseCase` decides each column's type on the default dispatcher and returns a
    `Result<CsvTable>`. The table keeps the raw text and converts a row only when the screen reads it.
@@ -59,8 +75,8 @@ CsvViewerScreen --CsvEvent.Retry--> CsvViewerViewModel --> LoadCsvTableUseCase -
 - Fields are separated by commas. A field in double quotes can hold commas, line breaks and `""` (one literal quote).
 - CRLF, LF and CR all end a record, and the last record may have no line ending.
 - A UTF-8 byte order mark at the start is ignored.
-- Empty lines are skipped, except in a single-column file, where an empty line is a row with an empty value. A line
-  with only `""` is always a row.
+- Empty lines are skipped, except after the header of a single-column file, where an empty line is a row with an empty
+  value. A line with only `""` is always a row.
 - The first record is the header. A row shorter than the header is padded with empty values; a row longer than the
   header adds unnamed columns (shown as `Column <n>`).
 - Text is read as UTF-8. A file that is not valid UTF-8 is read again as Windows-1252, the default of Excel on Windows.
@@ -77,8 +93,8 @@ Each column gets one type, decided from all its non-empty values (surrounding wh
 | DATE | an ISO-8601 date, date-time or date-time with an offset, years 1 to 9999 (`java.time` ISO parsers, strict) | `2001-04-20`, `1978-01-02T00:00:00`, `2001-04-20T10:15+02:00` |
 | TEXT | anything else, kept exactly as written | `Theo`, `2023-02-30` |
 
-- A column with only empty values is TEXT. An empty value in an INTEGER or DATE column is shown as `-`.
-- In a TEXT column, a value that is an `https` URL whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` is
+- A column with only empty values is TEXT. An empty or blank value is shown as `-`.
+- In a TEXT column, a value that is a lower-case `https` URL whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` is
   shown as an image (loaded with Coil, a default avatar while loading or when it fails). The column stays TEXT, so a
   column that mixes image URLs and names shows each value as it is.
 - Dates are shown in the device's locale format, with a 24-hour time when the file gives one. A date-time with an
@@ -115,7 +131,8 @@ fails, so the app keeps running.
   failure there is not caught. Only an `OutOfMemoryError` or a bug in the app can cause it: the load needs more memory
   than the screen does afterwards, and the conversion uses the same checks that decided the column type. Catching it
   would not help, since whatever is shown instead needs memory that may not be there.
-- **Comma only**: a file separated by `;` or tabs shows each line as a single TEXT column.
+- **Comma only**: only comma-separated files are supported. A file with another separator, such as `;` or tabs, still
+  loads, but its columns are not shown correctly.
 - **ISO dates only**: dates in another format (`20-04-2001`, `04/20/2001`) are shown as TEXT.
 - **Encodings**: only UTF-8 and Windows-1252 are read correctly. A file in another encoding still loads, but its
   non-ASCII letters show garbled.
