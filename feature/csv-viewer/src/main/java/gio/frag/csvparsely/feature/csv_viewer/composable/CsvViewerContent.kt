@@ -70,7 +70,7 @@ internal fun CsvViewerContent(
         )
         when (result) {
             SnackbarResult.ActionPerformed -> onEvent(CsvEvent.Retry)
-            // Nothing to do: the snackbar goes away only when the error is cleared
+            // Nothing to do: Retry is the only action
             SnackbarResult.Dismissed -> Unit
         }
     }
@@ -170,7 +170,7 @@ private fun CsvRowList(
             column.name.ifBlank {
                 resources.getString(
                     R.string.feature_csv_viewer_unnamed_column,
-                    index + 1
+                    index + 1,
                 )
             }
         }
