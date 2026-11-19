@@ -227,6 +227,21 @@ class CsvViewerContentTest {
     }
 
     @Test
+    fun retryThatFailsAgainWithTheSameCodeShowsTheSnackbarAgain() {
+        val state = CsvUiState(
+            isLoading = false,
+            error = CsvError.Http(code = 503),
+        )
+
+        val shownState = setContent(state)
+        composeTestRule.onNodeWithText("Retry").performClick()
+        // The same failure again, with no frame in between, as when Retry fails at once
+        shownState.value = state.copy(error = CsvError.Http(code = 503))
+
+        composeTestRule.onNodeWithText("Retry").assertIsDisplayed()
+    }
+
+    @Test
     fun noRetryWhenRetryingCannotHelp() {
         val expectedMessage = "The file is malformed: a quote opened on line 3 is never closed."
 
