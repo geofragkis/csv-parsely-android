@@ -26,6 +26,6 @@ internal fun Project.configureAndroidCompose(commonExtension: CommonExtension) {
         "androidTestImplementation"(libs.findLibrary("androidx-compose-ui-test-junit4").get())
         // ui-test-junit4 brings Espresso 3.5, which crashes on Android 17 (InputManager.getInstance was removed)
         "androidTestImplementation"(libs.findLibrary("androidx-espresso-core").get())
-        "debugImplementation"(libs.findLibrary("androidx-compose-ui-test-manifest").get())
+        "debugRuntimeOnly"(libs.findLibrary("androidx-compose-ui-test-manifest").get())
     }
 }

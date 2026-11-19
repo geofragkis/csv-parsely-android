@@ -15,7 +15,6 @@ javaxInject = "1"
 kotlinxCoroutines = "1.11.0"
 okhttp = "5.5.1"
 coil = "3.6.3"
-dependencyAnalysis = "3.20.3"
 android-compileSdk = "37"
 android-minSdk = "26"
 android-targetSdk = "37"
@@ -60,5 +59,3 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-# Development only: reports unused or wrongly declared dependencies (`./gradlew buildHealth`).
-dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependencyAnalysis" }

@@ -3,12 +3,14 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.domain)
-    implementation(libs.okhttp)
+    // api: the public classes implement and return domain types (CsvRepository, RawCsv)
+    api(projects.core.domain)
+    // api: CsvDownloader's public constructor takes an OkHttpClient
+    api(libs.okhttp)
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.test.runner)
+    androidTestRuntimeOnly(libs.androidx.test.runner)
 }

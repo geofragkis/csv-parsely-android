@@ -161,30 +161,34 @@ All Hilt modules live in `:app`, the only module that sees both `:core:data` and
 ### Build changes
 
 - `minSdk` 26 so `java.time` is available without desugaring. That still covers practically all active devices.
-- Remove unused template dependencies (e.g. espresso if no test uses it), in line with "only necessary dependencies".
+- Only the dependencies the code uses, in line with "only necessary dependencies".
 
 ### Testing
 
+Tests cover crashes, wrong data and the spec scenarios; a case the app can't reach, or a check another test already makes, has no test.
+
 | Layer | Test type | What |
 |---|---|---|
-| `CsvParser` | JVM unit | every scenario in `csv-parsing` (including a Windows-1252 file read through the fallback), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
-| `RawCsv.toCsvTable()` and `CsvTable.row()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day, date-times with an offset (`Z`, positive, negative), an invalid offset, image values: image URL, query and upper-case extension, non-image URL, invalid URL, mixed column |
-| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection gives a network error, cancellation while a read is blocked stops at once, a file that can't be created and a failed write give a storage error |
+| `CsvParser` | JVM unit | every scenario in `csv-parsing` (including a Windows-1252 file read through the fallback), plus a quote inside an unquoted field and text after a closing quote |
+| `RawCsv.toCsvTable()` and `CsvTable.row()` | JVM unit | the scenarios in `column-type-inference`, plus surrounding whitespace around integers and non-ASCII digits |
+| `CsvError.canRetry` | JVM unit | which failures can be retried and which can't |
+| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, unreachable server and dropped connection give a network error, cancellation while a read is blocked stops at once, a file that can't be created and a failed write give a storage error |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
 | Parser + type inference on a device | instrumented (emulator or phone) | a generated 100k-row file parsed and typed within a time limit, to check memory and speed where the heap is smaller than on the JVM |
-| `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Generic`, cancellation is rethrown and not turned into a failure |
-| `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | starts loading; rows, no rows, and failure (with and without Retry) states; Retry after a failure; Retry ignored while loading |
-| `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, an image URL shown as an image (found by its content description) and not as text, a non-image URL shown as text, empty state for no rows and for a failure, error snackbar with and without Retry |
+| `LoadCsvTableUseCase` | JVM unit (fake repository) | `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Generic`, cancellation is rethrown and not turned into a failure |
+| `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | starts loading; a failure with Retry; Retry after a failure; Retry ignored while loading |
+| `CsvViewerContent` | instrumented Compose UI | loading indicator, sample cards with labels and formatted values, formatting by type, a date-time with an offset converted to the device time zone, empty state for a header-only file, a message per error kind, Retry offered and sending the event, a Retry that fails again with the same code shows the snackbar again, no Retry when it can't help |
 
 ## Risks / Trade-offs
 
 - [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though, as raw text; cells are converted only when a row is shown, so there is no second, typed copy of the table. A file too large for memory fails with `FileTooLarge`, and this is noted as a known limit; pagination or a database would be the next step. Converting a row while scrolling (`CsvTable.row()`) runs outside the use case, so a failure there is not caught and crashes the app. Only an `OutOfMemoryError` or a bug in our own code can cause it, and neither is realistic: the load needs more memory at its peak than the screen needs afterwards (the heap stayed flat at 47 MB while scrolling 1,000,000 rows on a Pixel 8), and conversion uses the same checks that typed the column. Catching it would not help: the table still fills the heap, so whatever is shown instead needs memory that may not be there. The README lists this as a known limit.
-
 - [The sample's avatar URLs answer 404] → Every card then shows the default avatar. That's the designed fallback, so the screen still looks intended.
-
-## Open Questions
-
+- [Every INTEGER and DATE cell is parsed twice] → Once to pick the column type and again when its row is shown, and a date-time value first fails the date-only parse with a thrown exception. Measured at about 150 ms for 100k date-time cells on the desktop JVM, so it is kept simple.
 - [A validation file uses `;` or dates in another format] → Its columns are shown as TEXT, so data still displays but less precisely. The decision is written down in the specs and can be extended in one place (multi-format date detection is a listed follow-up).
 - [A validation file is a Windows-1252 Excel export] → It's read again as Windows-1252 and shown correctly. A file in another code page loads with garbled non-ASCII letters; the README says so.
 - [Five modules for one screen] → Each module has a distinct responsibility, and the build-logic plugins keep each module's build file to a few lines.
 - [Raising `minSdk` from 24 to 26] → Drops Android 7.x devices, which are negligible today. It avoids enabling desugaring just for `java.time`.
+
+## Open Questions
+
+None.

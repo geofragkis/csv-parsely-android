@@ -31,7 +31,7 @@ The app must download a CSV file from a remote URL and show its contents, with e
 ## Impact
 
 - **Code**: new modules `:build-logic`, `:core:domain`, `:core:data`, `:core:design-system`, `:feature:csv-viewer`. `:app` becomes a thin Hilt entry point, and its theme files move to `:core:design-system`.
-- **Dependencies**: Hilt (+ KSP), OkHttp, Kotlin coroutines, lifecycle ViewModel/runtime Compose, hilt-navigation-compose, Coil (Compose + OkHttp network). Test only: MockWebServer, kotlinx-coroutines-test, Compose UI test. Development only: the Dependency Analysis Gradle Plugin, to find unused or wrongly declared dependencies while coding; removed before the change is finished.
+- **Dependencies**: Hilt (+ KSP), OkHttp, Kotlin coroutines, lifecycle ViewModel/runtime Compose, hilt-lifecycle-viewmodel-compose, Coil (Compose + OkHttp network). Test only: MockWebServer, kotlinx-coroutines-test, Compose UI test. Development only: the Dependency Analysis Gradle Plugin, to find unused or wrongly declared dependencies while coding; removed before the change is finished.
 - **Build**: `minSdk` raised from 24 to 26. Gradle configuration moves into convention plugins.
 - **Permissions**: `INTERNET` added to the manifest.
 - **Out of scope**: Room/offline storage, pagination of files larger than memory, a detail screen, custom loader animations.
