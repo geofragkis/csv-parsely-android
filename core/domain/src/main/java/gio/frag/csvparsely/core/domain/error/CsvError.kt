@@ -8,6 +8,17 @@ package gio.frag.csvparsely.core.domain.error
  */
 sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
 
+    /**
+     * Whether loading again can help: true for network failures and for server answers that can change on a second
+     * try (401, 403, 408, 429 and 5xx), false for problems with the file itself or anything unexpected.
+     */
+    val canRetry: Boolean
+        get() = when (this) {
+            is Network -> true
+            is Http -> code in RETRYABLE_HTTP_CODES || code in 500..599
+            is EmptyFile, is Malformed, is FileTooLarge, is Unknown -> false
+        }
+
     /** The server could not be reached or the connection dropped. */
     data class Network(
         override val cause: Throwable?
@@ -31,4 +42,8 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
     data class Unknown(
         override val cause: Throwable
     ) : CsvError(cause)
+
+    private companion object {
+        val RETRYABLE_HTTP_CODES = setOf(401, 403, 408, 429)
+    }
 }
