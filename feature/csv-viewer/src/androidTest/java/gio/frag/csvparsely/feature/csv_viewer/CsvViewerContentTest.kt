@@ -59,15 +59,18 @@ class CsvViewerContentTest {
                 listOf("Petra", "Boersma", "1", "2001-04-20T00:00:00", "https://api.multiavatar.com/2672c49d6099f87274.png"),
             ),
         ).toCsvTable()
+        val expectedTexts = listOf("Theo", "Jansen", "5", "Jan 2, 1978, 00:00", "Fiona", "Petra", "Apr 20, 2001, 00:00")
+        val expectedCardCount = 3
+        val expectedHiddenUrl = "https://api.multiavatar.com/2cdf5db9b4dee297b7.png"
 
         setContent(CsvUiState(isLoading = false, table = table))
 
-        listOf("Theo", "Jansen", "5", "Jan 2, 1978, 00:00", "Fiona", "Petra", "Apr 20, 2001, 00:00").forEach { text ->
+        expectedTexts.forEach { text ->
             composeTestRule.onNodeWithText(text).assertIsDisplayed()
         }
-        composeTestRule.onAllNodesWithText("First name").assertCountEquals(3)
-        composeTestRule.onAllNodesWithContentDescription("avatar").assertCountEquals(3)
-        composeTestRule.onNodeWithText("https://api.multiavatar.com/2cdf5db9b4dee297b7.png").assertDoesNotExist()
+        composeTestRule.onAllNodesWithText("First name").assertCountEquals(expectedCardCount)
+        composeTestRule.onAllNodesWithContentDescription("avatar").assertCountEquals(expectedCardCount)
+        composeTestRule.onNodeWithText(expectedHiddenUrl).assertDoesNotExist()
     }
 
     @Test
@@ -78,10 +81,11 @@ class CsvViewerContentTest {
                 listOf("-3", "2020-05-01T14:30:00", "2001-04-20", "", "x"),
             ),
         ).toCsvTable()
+        val expectedTexts = listOf("-3", "May 1, 2020, 14:30", "Apr 20, 2001", "-", "Column 5")
 
         setContent(CsvUiState(isLoading = false, table = table))
 
-        listOf("-3", "May 1, 2020, 14:30", "Apr 20, 2001", "-", "Column 5").forEach { text ->
+        expectedTexts.forEach { text ->
             composeTestRule.onNodeWithText(text).assertIsDisplayed()
         }
     }
@@ -93,10 +97,11 @@ class CsvViewerContentTest {
             header = listOf("Updated"),
             rows = listOf(listOf("2001-04-20T10:15:30+02:00")),
         ).toCsvTable()
+        val expectedText = "Apr 20, 2001, 09:15"
 
         setContent(CsvUiState(isLoading = false, table = table))
 
-        composeTestRule.onNodeWithText("Apr 20, 2001, 09:15").assertIsDisplayed()
+        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
     }
 
     @Test
@@ -107,13 +112,16 @@ class CsvViewerContentTest {
             header = listOf("photo", "report"),
             rows = listOf(listOf(imageWithQuery, report)),
         ).toCsvTable()
+        val expectedImageDescription = "photo"
+        val expectedTexts = listOf("report", report)
 
         setContent(CsvUiState(isLoading = false, table = table))
 
-        composeTestRule.onNodeWithContentDescription("photo").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription(expectedImageDescription).assertIsDisplayed()
         composeTestRule.onNodeWithText(imageWithQuery).assertDoesNotExist()
-        composeTestRule.onNodeWithText("report").assertIsDisplayed()
-        composeTestRule.onNodeWithText(report).assertIsDisplayed()
+        expectedTexts.forEach { text ->
+            composeTestRule.onNodeWithText(text).assertIsDisplayed()
+        }
     }
 
     @Test
@@ -122,18 +130,21 @@ class CsvViewerContentTest {
             header = listOf("First name", "Sur name"),
             rows = emptyList(),
         ).toCsvTable()
+        val expectedText = "Nothing to show"
 
         setContent(CsvUiState(isLoading = false, table = table))
 
-        composeTestRule.onNodeWithText("Nothing to show").assertIsDisplayed()
+        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
         composeTestRule.onNodeWithText("First name").assertDoesNotExist()
     }
 
     @Test
     fun failureBeforeAnyRowsShowsTheEmptyState() {
+        val expectedText = "Nothing to show"
+
         setContent(CsvUiState(isLoading = false, error = CsvError.Network(cause = null)))
 
-        composeTestRule.onNodeWithText("Nothing to show").assertIsDisplayed()
+        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
     }
 
     /** Shows [state] with an English (US) locale, so dates have a known format. */
