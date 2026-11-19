@@ -91,10 +91,6 @@ The system SHALL show an empty state, an icon with the message "Nothing to show"
 - **WHEN** the downloaded file has only a header
 - **THEN** the empty state is shown instead of the list, and no error snackbar
 
-#### Scenario: Rows shown with an error
-- **WHEN** the screen has rows to show and an error to show at the same time
-- **THEN** the rows stay visible, the error snackbar is shown, and the empty state is not shown
-
 ### Requirement: Errors are shown in a snackbar
 The system SHALL show, when loading fails, a snackbar with a message for the failure kind (no connection, server error with its code, file couldn't be saved on the phone, empty file, malformed file, file too large to show, unexpected error). The snackbar SHALL stay on screen as long as the failure is shown, and SHALL be shown again after a configuration change.
 

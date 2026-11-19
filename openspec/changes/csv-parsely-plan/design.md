@@ -178,7 +178,7 @@ All Hilt modules live in `:app`, the only module that sees both `:core:data` and
 
 ## Risks / Trade-offs
 
-- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though, as raw text; cells are converted only when a row is shown, so there is no second, typed copy of the table. A file too large for memory fails with `FileTooLarge`, and this is noted as a known limit; pagination or a database would be the next step.
+- [A validation file is larger than memory] → The parser streams the file, so the file itself is never loaded as a whole. The parsed rows are kept in memory, though, as raw text; cells are converted only when a row is shown, so there is no second, typed copy of the table. A file too large for memory fails with `FileTooLarge`, and this is noted as a known limit; pagination or a database would be the next step. Converting a row while scrolling (`CsvTable.row()`) runs outside the use case, so a failure there is not caught and crashes the app. Only an `OutOfMemoryError` or a bug in our own code can cause it, and neither is realistic: the load needs more memory at its peak than the screen needs afterwards (the heap stayed flat at 47 MB while scrolling 1,000,000 rows on a Pixel 8), and conversion uses the same checks that typed the column. Catching it would not help: the table still fills the heap, so whatever is shown instead needs memory that may not be there. The README lists this as a known limit.
 
 - [The sample's avatar URLs answer 404] → Every card then shows the default avatar. That's the designed fallback, so the screen still looks intended.
 

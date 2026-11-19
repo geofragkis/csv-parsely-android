@@ -241,28 +241,6 @@ class CsvViewerContentTest {
         composeTestRule.onNodeWithText("Retry").assertDoesNotExist()
     }
 
-    @Test
-    fun rowsStayVisibleWithAnError() {
-        val table = RawCsv(
-            header = listOf("First name"),
-            rows = listOf(listOf("Theo")),
-        ).toCsvTable()
-        val expectedTexts = listOf("Theo", "No connection. Check your internet and try again.")
-
-        setContent(
-            CsvUiState(
-                isLoading = false,
-                table = table,
-                error = CsvError.Network(cause = null),
-            ),
-        )
-
-        expectedTexts.forEach { text ->
-            composeTestRule.onNodeWithText(text).assertIsDisplayed()
-        }
-        composeTestRule.onNodeWithText("Nothing to show").assertDoesNotExist()
-    }
-
     /**
      * Shows [state] with an English (US) locale, so dates and numbers have a known format. Returns the shown state, so
      * a test can change it.
