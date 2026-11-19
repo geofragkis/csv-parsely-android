@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.feature.csv_viewer
+package gio.frag.csvparsely.feature.csv_viewer.model
 
 import androidx.compose.runtime.Immutable
 import gio.frag.csvparsely.core.domain.error.CsvError

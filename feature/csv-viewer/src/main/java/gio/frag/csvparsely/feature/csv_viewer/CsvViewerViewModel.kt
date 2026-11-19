@@ -6,6 +6,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.usecase.LoadCsvTableUseCase
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvEvent
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
