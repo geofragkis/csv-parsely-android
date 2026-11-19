@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A blue person on a light blue circle, shown while an image loads and when it fails -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#FFDCE8F7"
+        android:pathData="M24,0a24,24 0,1 1,0 48a24,24 0,1 1,0 -48z" />
+    <!-- Material Symbols "Person", 40dp and resting on the bottom of the circle -->
+    <group
+        android:scaleX="0.0416667"
+        android:scaleY="0.0416667"
+        android:translateX="4"
+        android:translateY="48">
+        <path
+            android:fillColor="#FF0060AE"
+            android:pathData="M480,-480q-66,0 -113,-47t-47,-113q0,-66 47,-113t113,-47q66,0 113,47t47,113q0,66 -47,113t-113,47ZM160,-160v-112q0,-34 17.5,-62.5T224,-378q62,-31 126,-46.5T480,-440q66,0 130,15.5T736,-378q29,15 46.5,43.5T800,-272v112L160,-160Z" />
+    </group>
+</vector>

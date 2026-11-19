@@ -81,21 +81,21 @@ class LoadCsvTableIntegrationTest {
                 CellValue.Text("Jansen"),
                 CellValue.Integer(5),
                 dateAtMidnight(1978, 1, 2),
-                CellValue.Text("https://api.multiavatar.com/2cdf5db9b4dee297b7.png"),
+                CellValue.Image("https://api.multiavatar.com/2cdf5db9b4dee297b7.png"),
             ),
             listOf(
                 CellValue.Text("Fiona"),
                 CellValue.Text("de Vries"),
                 CellValue.Integer(7),
                 dateAtMidnight(1950, 11, 12),
-                CellValue.Text("https://api.multiavatar.com/b9339cb9e7a833cd5e.png"),
+                CellValue.Image("https://api.multiavatar.com/b9339cb9e7a833cd5e.png"),
             ),
             listOf(
                 CellValue.Text("Petra"),
                 CellValue.Text("Boersma"),
                 CellValue.Integer(1),
                 dateAtMidnight(2001, 4, 20),
-                CellValue.Text("https://api.multiavatar.com/2672c49d6099f87274.png"),
+                CellValue.Image("https://api.multiavatar.com/2672c49d6099f87274.png"),
             ),
         )
 

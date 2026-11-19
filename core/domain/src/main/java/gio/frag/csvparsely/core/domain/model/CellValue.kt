@@ -19,6 +19,13 @@ sealed interface CellValue {
     data class Text(val value: String) : CellValue
 
     /**
+     * A value from a TEXT column that is an image URL, such as `https://example.com/photo.png`.
+     *
+     * @property url the URL as it was in the file, without surrounding whitespace
+     */
+    data class Image(val url: String) : CellValue
+
+    /**
      * A value from an INTEGER column.
      *
      * A [Long] rather than an [Int], so large whole numbers such as IDs or timestamps in milliseconds

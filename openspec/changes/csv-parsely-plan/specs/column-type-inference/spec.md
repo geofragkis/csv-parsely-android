@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Converts the raw text of every parsed column into a string, an integer or a date, decided from the column's content so that any CSV layout is typed correctly.
+Converts the raw text of every parsed column into a string, an integer or a date, and marks text values that are image URLs as images, decided from the column's content so that any CSV layout is typed correctly.
 
 ## ADDED Requirements
 
@@ -85,3 +85,38 @@ The system SHALL type a column as TEXT when it is not INTEGER or DATE. Text valu
 #### Scenario: Mixed column
 - **WHEN** a column holds `5` and `five`
 - **THEN** the column is TEXT and both values are kept unchanged
+
+### Requirement: Image values in text columns
+The system SHALL turn a non-empty value in a TEXT column into an image value when it is an `https` URL, with the scheme in lower case, whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` (ignoring case), ignoring surrounding whitespace, and SHALL keep the URL without that whitespace. Any other value SHALL stay text. Image values SHALL NOT change the column's type: the column stays TEXT.
+
+#### Scenario: Sample avatar column
+- **WHEN** the sample file is parsed
+- **THEN** the `avatar` column is TEXT and its values are image values
+
+#### Scenario: Image URL with a query
+- **WHEN** a TEXT value is `https://example.com/photo.JPG?size=2`
+- **THEN** it is an image value
+
+#### Scenario: Image URL with surrounding whitespace
+- **WHEN** a TEXT value is ` https://example.com/a.png `
+- **THEN** it is an image value with the URL `https://example.com/a.png`
+
+#### Scenario: Image URL over plain http
+- **WHEN** a TEXT value is `http://example.com/a.png`
+- **THEN** it stays text, since Android blocks plain `http` traffic and the image could never load
+
+#### Scenario: Image URL with an upper-case scheme
+- **WHEN** a TEXT value is `HTTPS://example.com/a.png`
+- **THEN** it stays text, since the image loader only loads a lower-case scheme
+
+#### Scenario: URL that is not an image
+- **WHEN** a TEXT value is `https://example.com/report.pdf`
+- **THEN** it stays text
+
+#### Scenario: Text that is not a valid URL
+- **WHEN** a TEXT value is `my photo.png`
+- **THEN** it stays text
+
+#### Scenario: Column mixing image URLs and other text
+- **WHEN** a column holds `https://example.com/a.png` and `Theo`
+- **THEN** the column is TEXT, the first value is an image value and the second stays text

@@ -29,7 +29,7 @@ The system SHALL show each data row as a card in a vertically scrolling list, in
 - **THEN** its values are labelled `Column <n>`, where n is its 1-based position
 
 ### Requirement: Image values
-The system SHALL show a TEXT value as an image when it is an `http` or `https` URL whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` (ignoring case). The image SHALL be loaded from the URL and shown on the left of the card. Until the image has loaded, and when it fails to load, a default avatar SHALL be shown in its place. Any other TEXT value, including a URL to something that is not an image, SHALL be shown as text.
+The system SHALL show an image value (see `column-type-inference`, "Image values in text columns") as an image, loaded from its URL and shown on the left of the card. Until the image has loaded, and when it fails to load, a default avatar SHALL be shown in its place. Any other TEXT value, including a URL to something that is not an image, SHALL be shown as text.
 
 #### Scenario: Image URL
 - **WHEN** a value is `https://api.multiavatar.com/2cdf5db9b4dee297b7.png`
