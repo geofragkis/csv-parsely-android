@@ -127,7 +127,7 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
 | `primaryContainer` / `onPrimaryContainer` | `#0060AE` / `#FFFFFF` | `#004A86` / `#D4E3FF` | top bar and its title |
 | `primary` / `onPrimary` | `#0060AE` / `#FFFFFF` | `#A3C9FF` / `#00315C` | Material default for accents |
 | `tertiary` | `#F76300` | `#FF9A5C` | loading indicator (white text on this orange is too faint, so orange is never behind text) |
-| `background` | `#F4F6F9` | `#111418` | screen |
+| `background` / `onBackground` | `#F4F6F9` / `#191C20` | `#111418` / `#E2E6EC` | screen / text placed straight on it |
 | `surfaceContainerLow` | `#FFFFFF` | `#1D2127` | cards (`ElevatedCard` default) |
 | `onSurface` / `onSurfaceVariant` | `#191C20` / `#4A5361` | `#E2E6EC` / `#AEB6C2` | values and messages / column names, empty state |
 | `inverseSurface` / `inverseOnSurface` / `inversePrimary` | `#2E3135` / `#F0F1F4` / `#A3C9FF` | `#E2E6EC` / `#2E3135` / `#0060AE` | snackbar, its message, its Retry action (Material `Snackbar` defaults) |

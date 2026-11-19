@@ -24,6 +24,10 @@ The system SHALL show each data row as a card in a vertically scrolling list, in
 - **WHEN** the sample file has loaded
 - **THEN** three cards are shown, and the first shows the `avatar` image on the left and `First name` `Theo`, `Sur name` `Jansen`, `Issue count` `5` and `Date of birth` `Jan 2, 1978, 00:00` on the right
 
+#### Scenario: Unnamed column
+- **WHEN** a column has no name in the header
+- **THEN** its values are labelled `Column <n>`, where n is its 1-based position
+
 ### Requirement: Image values
 The system SHALL show a TEXT value as an image when it is an `http` or `https` URL whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` (ignoring case). The image SHALL be loaded from the URL and shown on the left of the card. Until the image has loaded, and when it fails to load, a default avatar SHALL be shown in its place. Any other TEXT value, including a URL to something that is not an image, SHALL be shown as text.
 
@@ -49,10 +53,6 @@ The system SHALL use the Rabobank color scheme (blue `#0060AE`, orange `#F76300`
 #### Scenario: Android 12 or newer
 - **WHEN** the app runs on a device with dynamic colors (Android 12+)
 - **THEN** the screen still shows the Rabobank colors
-
-#### Scenario: Unnamed column
-- **WHEN** a column has no name in the header
-- **THEN** its values are labelled `Column <n>`, where n is its 1-based position
 
 ### Requirement: Format values by type
 The system SHALL show INTEGER values as plain digits with a sign for negatives, TEXT values unchanged, and empty values as a dash. DATE values SHALL be shown with the date in the device's locale format: a value that has a time in the file SHALL always show that time in 24-hour format (`HH:mm`, midnight as `00:00`), and a date-only value SHALL show only the date.
