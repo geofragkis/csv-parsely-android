@@ -15,9 +15,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import gio.frag.csvparsely.core.design_system.theme.CsvParselyTheme
+import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.inference.toCsvTable
 import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.model.RawCsv
@@ -38,16 +44,38 @@ import java.time.format.FormatStyle
  * Created by Giorgos Fragkis on 19-11-2026
  *
  * The CSV screen for a given [state], with no ViewModel, so it can be tested on its own.
+ *
+ * @param onEvent receives what the user does, such as pressing Retry
  */
 @Composable
 internal fun CsvViewerContent(
     state: CsvUiState,
+    onEvent: (CsvEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val table = state.table
+    val error = state.error
+    val snackbarHostState = remember { SnackbarHostState() }
+    val errorMessage = error?.snackbarMessage()
+    val retryLabel = stringResource(R.string.feature_csv_viewer_retry)
+
+    // Shown while the error is set, so it comes back after a configuration change and goes when the error is cleared
+    LaunchedEffect(error) {
+        if (errorMessage == null) return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = errorMessage,
+            actionLabel = if (state.canRetry) retryLabel else null,
+            duration = SnackbarDuration.Indefinite,
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            onEvent(CsvEvent.Retry)
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         topBar = { CsvTopBar() },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     ) { innerPadding ->
         val contentModifier = Modifier
             .fillMaxSize()
@@ -69,6 +97,19 @@ internal fun CsvViewerContent(
         }
     }
 }
+
+/** The snackbar message for this error. */
+@Composable
+private fun CsvError.snackbarMessage(): String =
+    when (this) {
+        is CsvError.Network -> stringResource(R.string.feature_csv_viewer_error_network)
+        is CsvError.Http -> stringResource(R.string.feature_csv_viewer_error_http, code)
+        is CsvError.Storage -> stringResource(R.string.feature_csv_viewer_error_storage)
+        is CsvError.EmptyFile -> stringResource(R.string.feature_csv_viewer_error_empty_file)
+        is CsvError.Malformed -> stringResource(R.string.feature_csv_viewer_error_malformed, line)
+        is CsvError.FileTooLarge -> stringResource(R.string.feature_csv_viewer_error_file_too_large)
+        is CsvError.Generic -> stringResource(R.string.feature_csv_viewer_error_generic)
+    }
 
 /** Shown when nothing is loading and there are no rows to show. */
 @Composable
@@ -163,7 +204,10 @@ private fun CsvRowList(
 @Composable
 private fun CsvViewerContentLoadingPreview() {
     CsvParselyTheme {
-        CsvViewerContent(state = CsvUiState(isLoading = true))
+        CsvViewerContent(
+            state = CsvUiState(isLoading = true),
+            onEvent = {},
+        )
     }
 }
 
@@ -184,6 +228,7 @@ private fun CsvViewerContentRowsPreview() {
                 isLoading = false,
                 table = table,
             ),
+            onEvent = {},
         )
     }
 }
@@ -192,6 +237,9 @@ private fun CsvViewerContentRowsPreview() {
 @Composable
 private fun CsvViewerContentEmptyPreview() {
     CsvParselyTheme {
-        CsvViewerContent(state = CsvUiState(isLoading = false))
+        CsvViewerContent(
+            state = CsvUiState(isLoading = false),
+            onEvent = {},
+        )
     }
 }

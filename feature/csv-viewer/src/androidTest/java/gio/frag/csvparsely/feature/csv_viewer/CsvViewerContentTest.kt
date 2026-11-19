@@ -2,6 +2,9 @@ package gio.frag.csvparsely.feature.csv_viewer
 
 import android.content.res.Configuration
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -12,15 +15,18 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import gio.frag.csvparsely.core.design_system.theme.CsvParselyTheme
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.inference.toCsvTable
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.IOException
 import java.util.Locale
 import java.util.TimeZone
 
@@ -147,15 +153,91 @@ class CsvViewerContentTest {
         composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
     }
 
+    @Test
+    fun eachErrorKindShowsItsMessage() {
+        val expectedMessages = listOf(
+            CsvError.Network(cause = null) to "No connection. Check your internet and try again.",
+            CsvError.Http(code = 503) to "Server error (503).",
+            CsvError.Storage(cause = IOException()) to "The file couldn't be saved on the phone.",
+            CsvError.EmptyFile() to "The file is empty.",
+            CsvError.Malformed(line = 3) to "The file is malformed: a quote opened on line 3 is never closed.",
+            CsvError.FileTooLarge(cause = OutOfMemoryError()) to "The file is too large to show.",
+            CsvError.Generic(cause = IllegalStateException()) to "Something went wrong.",
+        )
+        var state by mutableStateOf(CsvUiState(isLoading = false))
+        composeTestRule.setContent {
+            CsvParselyTheme {
+                CsvViewerContent(
+                    state = state,
+                    onEvent = {},
+                )
+            }
+        }
+
+        expectedMessages.forEach { (error, expectedMessage) ->
+            state = CsvUiState(isLoading = false, error = error)
+
+            composeTestRule.onNodeWithText(expectedMessage).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun retryIsOfferedWhenRetryingCanHelpAndSendsTheEvent() {
+        val events = mutableListOf<CsvEvent>()
+        val expectedEvents = listOf(CsvEvent.Retry)
+
+        setContent(
+            state = CsvUiState(isLoading = false, error = CsvError.Http(code = 503)),
+            onEvent = { event -> events += event },
+        )
+        composeTestRule.onNodeWithText("Retry").performClick()
+
+        composeTestRule.runOnIdle {
+            assertEquals(expectedEvents, events)
+        }
+    }
+
+    @Test
+    fun noRetryWhenRetryingCannotHelp() {
+        val expectedMessage = "The file is malformed: a quote opened on line 3 is never closed."
+
+        setContent(CsvUiState(isLoading = false, error = CsvError.Malformed(line = 3)))
+
+        composeTestRule.onNodeWithText(expectedMessage).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Retry").assertDoesNotExist()
+    }
+
+    @Test
+    fun rowsStayVisibleWithAnError() {
+        val table = RawCsv(
+            header = listOf("First name"),
+            rows = listOf(listOf("Theo")),
+        ).toCsvTable()
+        val expectedTexts = listOf("Theo", "No connection. Check your internet and try again.")
+
+        setContent(CsvUiState(isLoading = false, table = table, error = CsvError.Network(cause = null)))
+
+        expectedTexts.forEach { text ->
+            composeTestRule.onNodeWithText(text).assertIsDisplayed()
+        }
+        composeTestRule.onNodeWithText("Nothing to show").assertDoesNotExist()
+    }
+
     /** Shows [state] with an English (US) locale, so dates have a known format. */
-    private fun setContent(state: CsvUiState) {
+    private fun setContent(
+        state: CsvUiState,
+        onEvent: (CsvEvent) -> Unit = {},
+    ) {
         composeTestRule.setContent {
             val configuration = Configuration(LocalConfiguration.current).apply {
                 setLocale(Locale.US)
             }
             CompositionLocalProvider(LocalConfiguration provides configuration) {
                 CsvParselyTheme {
-                    CsvViewerContent(state = state)
+                    CsvViewerContent(
+                        state = state,
+                        onEvent = onEvent,
+                    )
                 }
             }
         }
