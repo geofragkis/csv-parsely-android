@@ -87,7 +87,7 @@ The system SHALL type a column as TEXT when it is not INTEGER or DATE. Text valu
 - **THEN** the column is TEXT and both values are kept unchanged
 
 ### Requirement: Image values in text columns
-The system SHALL turn a non-empty value in a TEXT column into an image value when it is an `https` URL whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` (ignoring case), ignoring surrounding whitespace, and SHALL keep the URL without that whitespace. Any other value SHALL stay text. Image values SHALL NOT change the column's type: the column stays TEXT.
+The system SHALL turn a non-empty value in a TEXT column into an image value when it is an `https` URL, with the scheme in lower case, whose path ends in `.png`, `.jpg`, `.jpeg`, `.gif` or `.webp` (ignoring case), ignoring surrounding whitespace, and SHALL keep the URL without that whitespace. Any other value SHALL stay text. Image values SHALL NOT change the column's type: the column stays TEXT.
 
 #### Scenario: Sample avatar column
 - **WHEN** the sample file is parsed
@@ -104,6 +104,10 @@ The system SHALL turn a non-empty value in a TEXT column into an image value whe
 #### Scenario: Image URL over plain http
 - **WHEN** a TEXT value is `http://example.com/a.png`
 - **THEN** it stays text, since Android blocks plain `http` traffic and the image could never load
+
+#### Scenario: Image URL with an upper-case scheme
+- **WHEN** a TEXT value is `HTTPS://example.com/a.png`
+- **THEN** it stays text, since the image loader only loads a lower-case scheme
 
 #### Scenario: URL that is not an image
 - **WHEN** a TEXT value is `https://example.com/report.pdf`

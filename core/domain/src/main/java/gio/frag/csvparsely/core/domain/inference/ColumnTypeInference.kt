@@ -21,7 +21,7 @@ private val INTEGER_PATTERN = Regex("[+-]?(0|[1-9][0-9]*)")
  */
 private val SUPPORTED_YEARS = 1..9999
 
-// Only https: Android blocks plain http traffic by default, so an http image could never load
+// Only https, in lower case: Android blocks plain http traffic by default, and Coil only loads a lower-case scheme
 private const val IMAGE_SCHEME = "https"
 private val IMAGE_EXTENSIONS = listOf(".png", ".jpg", ".jpeg", ".gif", ".webp")
 
@@ -114,7 +114,7 @@ internal fun String.toCellValue(type: ColumnType): CellValue {
 }
 
 /**
- * Whether this is an `https` URL whose path ends in an image extension, ignoring case. Only the path is
+ * Whether this is a lower-case `https` URL whose path ends in an image extension, in any case. Only the path is
  * checked, so `https://example.com/photo.png?size=2` is an image and `https://example.com/report.pdf` is not.
  */
 private fun String.isImageUrl(): Boolean {
@@ -126,7 +126,7 @@ private fun String.isImageUrl(): Boolean {
         }
         ?: return false
     val path = uri.path ?: return false
-    return uri.scheme.equals(IMAGE_SCHEME, ignoreCase = true) &&
+    return uri.scheme == IMAGE_SCHEME &&
         IMAGE_EXTENSIONS.any { extension -> path.endsWith(extension, ignoreCase = true) }
 }
 

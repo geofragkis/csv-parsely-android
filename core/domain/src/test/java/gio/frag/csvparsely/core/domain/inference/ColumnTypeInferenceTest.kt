@@ -474,6 +474,15 @@ class ColumnTypeInferenceTest {
     }
 
     @Test
+    fun `image URL with an upper-case scheme stays text`() {
+        val url = "HTTPS://example.com/a.png"
+        val table = singleColumnCSVTable(url)
+        val expectedResult = listOf(Text(url))
+
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
     fun `URL that is not an image stays text`() {
         val url = "https://example.com/report.pdf"
         val table = singleColumnCSVTable(url)
