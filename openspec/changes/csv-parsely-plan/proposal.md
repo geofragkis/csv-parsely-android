@@ -13,6 +13,8 @@ The app must download a CSV file from a remote URL and show its contents, with e
 - Infer each column's type (TEXT, INTEGER or DATE) from its content and convert every cell to that type.
 - Keep rows whose field count differs from the header: pad short rows and keep extra fields as unnamed columns.
 - Show the rows in a single screen: a `LazyColumn` of non-clickable cards, a loading indicator, an empty state ("Nothing to show" with an icon) when there is nothing to show, and errors in a snackbar that stays on screen (with Retry when retrying can help).
+- Show a TEXT value that is an image URL (such as the sample's `avatar`) as the image itself, loaded with Coil, on the left of its card.
+- Theme the app in Rabobank's blue and orange, in light and dark mode, instead of the template's purple and the wallpaper-based dynamic colors.
 - Add unit tests (parser, type inference, download, ViewModel), a JVM integration test from HTTP to typed table, and Compose UI tests, written together with the code they cover.
 
 ## Capabilities
@@ -29,8 +31,8 @@ The app must download a CSV file from a remote URL and show its contents, with e
 ## Impact
 
 - **Code**: new modules `:build-logic`, `:core:domain`, `:core:data`, `:core:design-system`, `:feature:csv-viewer`. `:app` becomes a thin Hilt entry point, and its theme files move to `:core:design-system`.
-- **Dependencies**: Hilt (+ KSP), OkHttp, Kotlin coroutines, lifecycle ViewModel/runtime Compose, hilt-navigation-compose. Test only: MockWebServer, kotlinx-coroutines-test, Compose UI test. Development only: the Dependency Analysis Gradle Plugin, to find unused or wrongly declared dependencies while coding; removed before the change is finished.
+- **Dependencies**: Hilt (+ KSP), OkHttp, Kotlin coroutines, lifecycle ViewModel/runtime Compose, hilt-navigation-compose, Coil (Compose + OkHttp network). Test only: MockWebServer, kotlinx-coroutines-test, Compose UI test. Development only: the Dependency Analysis Gradle Plugin, to find unused or wrongly declared dependencies while coding; removed before the change is finished.
 - **Build**: `minSdk` raised from 24 to 26. Gradle configuration moves into convention plugins.
 - **Permissions**: `INTERNET` added to the manifest.
-- **Out of scope**: Room/offline storage, pagination of files larger than memory, image loading for URL columns, a detail screen, custom loader animations.
+- **Out of scope**: Room/offline storage, pagination of files larger than memory, a detail screen, custom loader animations.
 - **Possible follow-ups (separate changes, only after this one is done)**: recognising common non-ISO date formats per column.
