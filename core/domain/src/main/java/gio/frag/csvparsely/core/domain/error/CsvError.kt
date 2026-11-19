@@ -26,7 +26,8 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
     ) : CsvError(cause)
 
     /** The server answered with a non-2xx status [code]. */
-    data class Http(val code: Int) : CsvError()
+    // Not a data class: a failed Retry must differ from the last error, so the screen shows the snackbar again
+    class Http(val code: Int) : CsvError()
 
     /** The file couldn't be created or written on the phone, for example because the storage is full. */
     data class Storage(
