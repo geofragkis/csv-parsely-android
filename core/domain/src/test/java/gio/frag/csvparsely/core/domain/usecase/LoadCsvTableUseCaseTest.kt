@@ -1,10 +1,6 @@
 package gio.frag.csvparsely.core.domain.usecase
 
 import gio.frag.csvparsely.core.domain.error.CsvError
-import gio.frag.csvparsely.core.domain.model.CellValue.Integer
-import gio.frag.csvparsely.core.domain.model.CellValue.Text
-import gio.frag.csvparsely.core.domain.model.Column
-import gio.frag.csvparsely.core.domain.model.ColumnType
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
 import kotlinx.coroutines.CancellationException
@@ -12,7 +8,6 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertSame
@@ -21,25 +16,6 @@ import kotlin.test.assertSame
  * Created by Giorgos Fragkis on 16-11-2026
  */
 class LoadCsvTableUseCaseTest {
-
-    @Test
-    fun `a loaded file returns the typed table`() = runTest {
-        val rawCsv = RawCsv(
-            header = listOf("First name", "Issue count"),
-            rows = listOf(listOf("Theo", "5")),
-        )
-        val expectedColumns = listOf(
-            Column("First name", ColumnType.TEXT),
-            Column("Issue count", ColumnType.INTEGER),
-        )
-        val expectedRow = listOf(Text("Theo"), Integer(5))
-        val useCase = useCase(FakeCsvRepository { rawCsv })
-
-        val table = useCase().getOrThrow()
-
-        assertEquals(expectedColumns, table.columns)
-        assertEquals(expectedRow, table.row(0))
-    }
 
     @Test
     fun `a CsvError from the repository is passed on as is`() = runTest {

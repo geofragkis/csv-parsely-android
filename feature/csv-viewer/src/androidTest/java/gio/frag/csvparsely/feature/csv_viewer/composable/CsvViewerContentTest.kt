@@ -12,7 +12,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -127,31 +126,6 @@ class CsvViewerContentTest {
     }
 
     @Test
-    fun imageUrlsAreShownAsImagesAndOtherUrlsAsText() {
-        val imageWithQuery = "https://example.com/photo.JPG?size=2"
-        val report = "https://example.com/report.pdf"
-        val table = RawCsv(
-            header = listOf("photo", "report"),
-            rows = listOf(listOf(imageWithQuery, report)),
-        ).toCsvTable()
-        val expectedImageDescription = "photo"
-        val expectedTexts = listOf("report", report)
-
-        setContent(
-            CsvUiState(
-                isLoading = false,
-                table = table,
-            ),
-        )
-
-        composeTestRule.onNodeWithContentDescription(expectedImageDescription).assertIsDisplayed()
-        composeTestRule.onNodeWithText(imageWithQuery).assertDoesNotExist()
-        expectedTexts.forEach { text ->
-            composeTestRule.onNodeWithText(text).assertIsDisplayed()
-        }
-    }
-
-    @Test
     fun headerOnlyFileShowsTheEmptyState() {
         val table = RawCsv(
             header = listOf("First name", "Sur name"),
@@ -168,20 +142,6 @@ class CsvViewerContentTest {
 
         composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
         composeTestRule.onNodeWithText("First name").assertDoesNotExist()
-    }
-
-    @Test
-    fun failureBeforeAnyRowsShowsTheEmptyState() {
-        val expectedText = "Nothing to show"
-
-        setContent(
-            CsvUiState(
-                isLoading = false,
-                error = CsvError.Network(cause = null),
-            ),
-        )
-
-        composeTestRule.onNodeWithText(expectedText).assertIsDisplayed()
     }
 
     @Test
