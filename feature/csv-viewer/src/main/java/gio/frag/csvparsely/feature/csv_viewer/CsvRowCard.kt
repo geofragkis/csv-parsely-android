@@ -16,13 +16,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import gio.frag.csvparsely.core.design_system.theme.CsvParselyTheme
 import gio.frag.csvparsely.core.domain.model.CellValue
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 private const val EMPTY_VALUE = "-"
 
@@ -147,4 +152,26 @@ private fun CellValue.Date.formatted(dateFormatter: DateTimeFormatter): String {
             .toLocalDateTime()
     }
     return "${dateTime.format(dateFormatter)}, ${dateTime.format(TIME_FORMATTER)}"
+}
+
+@Preview
+@Composable
+private fun CsvRowCardPreview() {
+    CsvParselyTheme {
+        CsvRowCard(
+            labels = listOf("First name", "Issue count", "Date of birth", "Note", "avatar"),
+            cells = listOf(
+                CellValue.Text("Theo"),
+                CellValue.Integer(5),
+                CellValue.Date(
+                    date = LocalDate.of(1978, 1, 2),
+                    time = LocalTime.MIDNIGHT,
+                    offset = null,
+                ),
+                CellValue.Empty,
+                CellValue.Image("https://api.multiavatar.com/2cdf5db9b4dee297b7.png"),
+            ),
+            dateFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM),
+        )
+    }
 }

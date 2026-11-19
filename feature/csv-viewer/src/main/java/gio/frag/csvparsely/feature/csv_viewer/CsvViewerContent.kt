@@ -25,8 +25,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import gio.frag.csvparsely.core.design_system.theme.CsvParselyTheme
+import gio.frag.csvparsely.core.domain.inference.toCsvTable
 import gio.frag.csvparsely.core.domain.model.CsvTable
+import gio.frag.csvparsely.core.domain.model.RawCsv
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -152,5 +156,42 @@ private fun CsvRowList(
                 dateFormatter = dateFormatter,
             )
         }
+    }
+}
+
+@Preview
+@Composable
+private fun CsvViewerContentLoadingPreview() {
+    CsvParselyTheme {
+        CsvViewerContent(state = CsvUiState(isLoading = true))
+    }
+}
+
+@Preview
+@Composable
+private fun CsvViewerContentRowsPreview() {
+    val table = RawCsv(
+        header = listOf("First name", "Sur name", "Issue count", "Date of birth", "avatar"),
+        rows = listOf(
+            listOf("Theo", "Jansen", "5", "1978-01-02T00:00:00", "https://api.multiavatar.com/2cdf5db9b4dee297b7.png"),
+            listOf("Fiona", "de Vries", "7", "1950-11-12T00:00:00", "https://api.multiavatar.com/b9339cb9e7a833cd5e.png"),
+            listOf("Petra", "Boersma", "1", "2001-04-20T00:00:00", "https://api.multiavatar.com/2672c49d6099f87274.png"),
+        ),
+    ).toCsvTable()
+    CsvParselyTheme {
+        CsvViewerContent(
+            state = CsvUiState(
+                isLoading = false,
+                table = table,
+            ),
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun CsvViewerContentEmptyPreview() {
+    CsvParselyTheme {
+        CsvViewerContent(state = CsvUiState(isLoading = false))
     }
 }
