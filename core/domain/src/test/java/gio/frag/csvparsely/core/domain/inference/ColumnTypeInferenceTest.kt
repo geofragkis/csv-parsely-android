@@ -457,6 +457,14 @@ class ColumnTypeInferenceTest {
     }
 
     @Test
+    fun `image URL with surrounding whitespace is a trimmed image`() {
+        val table = singleColumnCSVTable(" https://example.com/a.png ")
+        val expectedResult = listOf(Image("https://example.com/a.png"))
+
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
     fun `URL that is not an image stays text`() {
         val url = "https://example.com/report.pdf"
         val table = singleColumnCSVTable(url)

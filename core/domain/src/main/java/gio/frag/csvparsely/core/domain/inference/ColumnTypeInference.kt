@@ -93,8 +93,9 @@ private fun columnType(values: List<String>): ColumnType {
 }
 
 /**
- * Converts one cell to the type of its column, decided by [toCsvTable]. A TEXT value is kept exactly as it is, as an
- * [CellValue.Image] when it is an image URL, and a blank value in an INTEGER or DATE column becomes [CellValue.Empty].
+ * Converts one cell to the type of its column, decided by [toCsvTable]. A TEXT value is kept exactly as it is, or
+ * becomes a trimmed [CellValue.Image] when it is an image URL, and a blank value in an INTEGER or DATE column becomes
+ * [CellValue.Empty].
  * Internal, so only [CsvTable] uses it.
  *
  * For example: `" 30 "` in an INTEGER column returns `Integer(30)`, `" "` in an INTEGER column returns `Empty`,
@@ -105,7 +106,7 @@ internal fun String.toCellValue(type: ColumnType): CellValue {
     if (type != ColumnType.TEXT && trimmed.isEmpty()) return CellValue.Empty
 
     return when (type) {
-        ColumnType.TEXT -> if (isImageUrl()) CellValue.Image(this) else CellValue.Text(this)
+        ColumnType.TEXT -> if (trimmed.isImageUrl()) CellValue.Image(trimmed) else CellValue.Text(this)
         ColumnType.INTEGER -> CellValue.Integer(checkNotNull(trimmed.toIntegerOrNull()))
         ColumnType.DATE -> checkNotNull(trimmed.toDateOrNull())
     }

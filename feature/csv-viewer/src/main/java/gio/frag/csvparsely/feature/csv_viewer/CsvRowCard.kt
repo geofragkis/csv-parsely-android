@@ -124,8 +124,8 @@ private fun CellLine(
 private fun CellValue.formatted(dateFormatter: DateTimeFormatter): String =
     when (this) {
         is CellValue.Text -> value.ifBlank { EMPTY_VALUE }
-        // Images are shown on the left of the card, never as a line
-        is CellValue.Image -> url
+        // This never happens, because the card shows images on the left; it fails if a future change shows one as a line
+        is CellValue.Image -> error("Images are shown on the left of the card, never as a line")
         is CellValue.Integer -> value.toString()
         is CellValue.Date -> formatted(dateFormatter)
         CellValue.Empty -> EMPTY_VALUE

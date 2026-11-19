@@ -21,7 +21,7 @@ sealed interface CellValue {
     /**
      * A value from a TEXT column that is an image URL, such as `https://example.com/photo.png`.
      *
-     * @property url the URL exactly as it was in the file
+     * @property url the URL as it was in the file, without surrounding whitespace
      */
     data class Image(val url: String) : CellValue
 
