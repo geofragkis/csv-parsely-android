@@ -22,7 +22,7 @@ private val INTEGER_PATTERN = Regex("[+-]?(0|[1-9][0-9]*)")
 private val SUPPORTED_YEARS = 1..9999
 
 // Only https, in lower case: Android blocks plain http traffic by default, and Coil only loads a lower-case scheme
-private const val IMAGE_SCHEME = "https"
+private const val IMAGE_URL_PREFIX = "https://"
 private val IMAGE_EXTENSIONS = listOf(".png", ".jpg", ".jpeg", ".gif", ".webp")
 
 /**
@@ -118,6 +118,8 @@ internal fun String.toCellValue(type: ColumnType): CellValue {
  * checked, so `https://example.com/photo.png?size=2` is an image and `https://example.com/report.pdf` is not.
  */
 private fun String.isImageUrl(): Boolean {
+    // Checked first, so values such as names are never parsed as a URI
+    if (!startsWith(IMAGE_URL_PREFIX)) return false
     val uri = runCatching { URI(this) }
         .getOrElse { error ->
             // Only a syntax error means "not a URL"; anything else is passed on
@@ -126,8 +128,7 @@ private fun String.isImageUrl(): Boolean {
         }
         ?: return false
     val path = uri.path ?: return false
-    return uri.scheme == IMAGE_SCHEME &&
-        IMAGE_EXTENSIONS.any { extension -> path.endsWith(extension, ignoreCase = true) }
+    return IMAGE_EXTENSIONS.any { extension -> path.endsWith(extension, ignoreCase = true) }
 }
 
 /**
