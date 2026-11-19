@@ -63,13 +63,13 @@ class LoadCsvTableUseCaseTest {
     }
 
     @Test
-    fun `an unknown exception becomes Unknown with the original as cause`() = runTest {
+    fun `an unknown exception becomes Generic with the original as cause`() = runTest {
         val exception = IllegalStateException("boom")
         val useCase = useCase(FakeCsvRepository { throw exception })
 
         val result = useCase()
 
-        val error = assertIs<CsvError.Unknown>(result.exceptionOrNull())
+        val error = assertIs<CsvError.Generic>(result.exceptionOrNull())
         assertSame(exception, error.cause)
     }
 

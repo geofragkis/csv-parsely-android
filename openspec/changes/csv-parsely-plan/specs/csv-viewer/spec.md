@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Shows the downloaded and typed CSV data on a single screen, with clear loading, empty and error states and feedback through a snackbar.
+Shows the downloaded and typed CSV data on a single screen, with clear loading and empty states, and errors in a snackbar.
 
 ## ADDED Requirements
 
@@ -58,30 +58,34 @@ The system SHALL convert a DATE value that has an offset to the device's time zo
 - **WHEN** a DATE value is `1978-01-02T00:00:00` on a device in any time zone
 - **THEN** it is shown as `Jan 2, 1978, 00:00`, never moved to another day
 
-### Requirement: Empty table message
-The system SHALL show a message saying the file has no rows when the file has a header but no data rows.
+### Requirement: Empty state
+The system SHALL show an empty state, an icon with the message "Nothing to show", instead of the list when nothing is loading and there are no rows to show: when the file has a header but no data rows, or when loading failed before any rows were shown. Rows that are already shown SHALL stay visible when an error is shown.
 
 #### Scenario: Header-only file
 - **WHEN** the downloaded file has only a header
-- **THEN** a no-rows message is shown instead of the list
+- **THEN** the empty state is shown instead of the list, and no error snackbar
 
-### Requirement: Errors are shown on the screen
-The system SHALL show, in place of the list, a message for the failure kind (no connection, server error with its code, empty file, malformed file, file too large to show, unexpected error) when loading fails. The message SHALL remain visible after a configuration change. A snackbar SHALL also announce the failure once.
+#### Scenario: Rows shown with an error
+- **WHEN** the screen has rows to show and an error to show at the same time
+- **THEN** the rows stay visible, the error snackbar is shown, and the empty state is not shown
+
+### Requirement: Errors are shown in a snackbar
+The system SHALL show, when loading fails, a snackbar with a message for the failure kind (no connection, server error with its code, file couldn't be saved on the phone, empty file, malformed file, file too large to show, unexpected error). The snackbar SHALL stay on screen as long as the failure is shown, and SHALL be shown again after a configuration change.
 
 #### Scenario: Offline on start
 - **WHEN** loading fails because the device is offline
-- **THEN** the screen says there is no connection and a snackbar announces it
+- **THEN** the empty state is shown and the snackbar says there is no connection
 
 #### Scenario: Unexpected failure
 - **WHEN** loading fails for a reason that is not one of the known kinds
-- **THEN** the screen shows a generic error message and the app does not crash
+- **THEN** the snackbar shows a generic error message and the app does not crash
 
 #### Scenario: Configuration change after a failure
 - **WHEN** loading failed and a configuration change occurs
-- **THEN** the error message and, if offered, the Retry button are still shown
+- **THEN** the snackbar with its message and, if offered, its Retry action is still shown
 
-### Requirement: Retry from the error screen
-The system SHALL offer a Retry button on the error screen only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (malformed, empty, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
+### Requirement: Retry from the error snackbar
+The system SHALL offer a Retry action on the error snackbar only for failures that a second try can fix: no connection, HTTP 408, 429 and 5xx. HTTP 401 and 403 SHALL NOT offer Retry, since the app sends no credentials and the answer would not change. All other failures (storage, malformed, empty, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
 
 #### Scenario: Retry succeeds
 - **WHEN** the user presses Retry and the download now succeeds
@@ -89,23 +93,23 @@ The system SHALL offer a Retry button on the error screen only for network-relat
 
 #### Scenario: Malformed file
 - **WHEN** loading fails because the file has an unclosed quote
-- **THEN** the screen says the file is malformed and offers no Retry
+- **THEN** the snackbar says the file is malformed and offers no Retry
 
 #### Scenario: File too large to show
 - **WHEN** loading fails because the app runs out of memory while reading the file
-- **THEN** the screen says the file is too large to show, offers no Retry, and the app does not crash
+- **THEN** the snackbar says the file is too large to show, offers no Retry, and the app does not crash
 
 #### Scenario: Server error
 - **WHEN** loading fails with HTTP 503
-- **THEN** the screen shows a server error with code 503 and offers Retry
+- **THEN** the snackbar shows a server error with code 503 and offers Retry
 
 #### Scenario: Access denied
 - **WHEN** loading fails with HTTP 401 or 403
-- **THEN** the screen shows a server error with that code and offers Retry
+- **THEN** the snackbar shows a server error with that code and offers no Retry
 
 #### Scenario: Not found
 - **WHEN** loading fails with HTTP 404
-- **THEN** the screen shows a server error with code 404 and offers no Retry
+- **THEN** the snackbar shows a server error with code 404 and offers no Retry
 
 #### Scenario: No Retry while loading
 - **WHEN** a download is in progress
@@ -117,10 +121,3 @@ The system SHALL lock the screen to portrait orientation on devices where the pl
 #### Scenario: Phone rotated to landscape
 - **WHEN** a phone is turned to landscape
 - **THEN** the screen stays in portrait
-
-### Requirement: Feedback is shown once
-The system SHALL show each snackbar message once. It SHALL NOT appear again after a configuration change.
-
-#### Scenario: Configuration change after an error snackbar
-- **WHEN** an error snackbar was shown and a configuration change occurs
-- **THEN** the snackbar is not shown a second time, while the error message stays on the screen

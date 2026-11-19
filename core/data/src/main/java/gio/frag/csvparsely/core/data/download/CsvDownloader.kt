@@ -13,6 +13,8 @@ import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 
 /**
  * Created by Giorgos Fragkis on 16-11-2026
@@ -52,21 +54,54 @@ class CsvDownloader(
 
         response.use {
             if (!response.isSuccessful) throw CsvError.Http(response.code)
+
             // Creates the download folder on the first run; does nothing when it already exists
             directory.mkdirs()
+
             val file = File(directory, FILE_NAME)
             // FileOutputStream empties the file first, so it replaces the one from an earlier download
-            runCatching {
-                FileOutputStream(file).use { output ->
-                    response.body.byteStream().copyTo(output)
+            val fileOutput = runCatching { FileOutputStream(file) }
+                .getOrElse {
+                    // Can't create the file: a problem on the phone, not the network, so retrying won't help
+                    throw storageError(it)
                 }
-            }.getOrElse { throw networkError(it) }
+
+            // Closing can also fail on a full disk; read errors are already CsvErrors and pass through unchanged
+            runCatching {
+                fileOutput.use { output ->
+                    copy(
+                        input = response.body.byteStream(),
+                        output = output,
+                    )
+                }
+            }.getOrElse { throw storageError(it) }
+
             return file
         }
     }
 
     /**
-     * Maps a failed request or copy: an [IOException] becomes [CsvError.Network], anything else (such as running out
+     * Copies [input] into [output], reading and writing separately: a failed read is a network error, a failed write a
+     * storage error. Internal so the tests can check that split.
+     */
+    internal fun CoroutineScope.copy(
+        input: InputStream,
+        output: OutputStream,
+    ) {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            // Each read waits for the next bytes from the connection; -1 means the whole body has arrived
+            val read = runCatching { input.read(buffer) }
+                .getOrElse { throw networkError(it) }
+            if (read == -1) break
+
+            runCatching { output.write(buffer, 0, read) }
+                .getOrElse { throw storageError(it) }
+        }
+    }
+
+    /**
+     * Maps a failed request or read: an [IOException] becomes [CsvError.Network], anything else (such as running out
      * of memory) is passed on unchanged for the use case to map.
      */
     private fun CoroutineScope.networkError(error: Throwable): Throwable {
@@ -74,6 +109,13 @@ class CsvDownloader(
         ensureActive()
         return if (error is IOException) CsvError.Network(error) else error
     }
+
+    /**
+     * Maps a failed file creation or write: an [IOException] becomes [CsvError.Storage], anything else (such as running
+     * out of memory) is passed on unchanged for the use case to map.
+     */
+    private fun storageError(error: Throwable): Throwable =
+        if (error is IOException) CsvError.Storage(error) else error
 
     private companion object {
         const val FILE_NAME = "download.csv"

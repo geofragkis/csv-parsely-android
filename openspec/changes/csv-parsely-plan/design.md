@@ -24,7 +24,7 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 ### Modules and dependency direction
 
 ```
-            :app  (Hilt application, MainActivity, global Scaffold + SnackbarHost)
+            :app  (Hilt application, MainActivity, app Scaffold)
            /    \
           v      v
 :feature:csv-viewer --> :core:design-system
@@ -39,8 +39,8 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 | `:core:domain` | pure Kotlin/JVM | models (`CsvTable`, `Column`, `ColumnType`, `CellValue`, `RawCsv`), `CsvError`, `CsvRepository` interface, `RawCsv.toCsvTable()`, `LoadCsvTableUseCase`, dispatcher qualifiers |
 | `:core:data` | Android library | `CsvDownloader` (OkHttp), `CsvParser`, `CsvRepositoryImpl` (no Hilt: `:app` builds them) |
 | `:core:design-system` | Android library | theme (moved from `:app`) |
-| `:feature:csv-viewer` | Android library | `CsvViewerViewModel`, UI state/event/effect types, screen composables, string resources |
-| `:app` | application | `@HiltAndroidApp`, `MainActivity`, app-level `Scaffold` with the `SnackbarHost`, all Hilt modules |
+| `:feature:csv-viewer` | Android library | `CsvViewerViewModel`, UI state and event types, screen composables, string resources |
+| `:app` | application | `@HiltAndroidApp`, `MainActivity`, app-level `Scaffold`, all Hilt modules |
 
 `:feature` never depends on `:core:data`. Only `:app` sees both, so Hilt can bind the repository implementation. `:core:domain` uses only `javax.inject` annotations (no Android, no Hilt plugin), so the domain stays a plain JVM module with fast tests.
 
@@ -48,11 +48,11 @@ The sample file is 349 bytes with CRLF line endings, no final newline, quoted st
 
 ### Download to a file, then parse
 
-`CsvDownloader` makes a GET request with OkHttp and copies the body into `cacheDir/csv/download.csv` with `InputStream.copyTo`, replacing the previous file. Steps:
+`CsvDownloader` makes a GET request with OkHttp and copies the body into `cacheDir/csv/download.csv`, replacing the previous file. Steps:
 
-1. A non-2xx status gives `CsvError.Http(code)`. An `IOException` from the call or the copy gives `CsvError.Network`; any other exception (such as running out of memory) is passed on for the use case to map. A full disk is reported as a network error too: it is rare for a small file in the cache directory, and telling it apart relies on an Android implementation detail (the `ENOSPC` errno inside the `IOException`).
+1. A non-2xx status gives `CsvError.Http(code)`. The body is copied in a small loop where reads and writes are separate steps. An `IOException` from the call or a read gives `CsvError.Network`. Failing to create or write the file (a problem on the device, such as a full disk) gives `CsvError.Storage`, since retrying won't help. Any other exception (such as running out of memory) is passed on for the use case to map.
 2. `download()` runs the blocking work on the IO dispatcher itself, so it is safe to call from any thread. `execute()` and the body reads block and don't notice coroutine cancellation, so on cancellation the OkHttp `Call` is cancelled, which makes a blocked read fail at once, so a cancelled download stops right away.
-3. A failed or cancelled download can leave a partial file. It is never parsed, because `download()` throws, and the next download overwrites it. There is no offline cache, and only one load runs at a time (Retry is accepted only in `Failed`, after the previous load has ended, and a configuration change keeps the ViewModel), so a canceled download can never write into the file of a newer one, and no temporary file or cleanup is needed.
+3. A failed or cancelled download can leave a partial file. It is never parsed, because `download()` throws, and the next download overwrites it. There is no offline cache, and only one load runs at a time (Retry is accepted only after a failure that retrying can fix, once the previous load has ended, and a configuration change keeps the ViewModel), so a canceled download can never write into the file of a newer one, and no temporary file or cleanup is needed.
 
 *Alternatives:* stream straight into the parser (no disk, but a literal reading of "the application must download the file" asks for a file, and the parser would be coupled to the network); Retrofit (adds nothing for one GET of a raw file).
 
@@ -96,9 +96,9 @@ The use case contains real logic (the conversion the brief asks for), so it's mo
 
 ### Errors
 
-`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `EmptyFile`, `Malformed(line)`, `FileTooLarge`, `Unknown(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
+`CsvError` is a sealed class (extending `Exception`): `Network`, `Http(code)`, `Storage(cause)`, `EmptyFile`, `Malformed(line)`, `FileTooLarge`, `Generic(cause)`. It travels inside `Result`, and the ViewModel maps it to a string resource.
 
-The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Unknown`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` becomes `CsvError.FileTooLarge` instead of a crash. Loading the file is by far the largest use of memory in the app, so a file too large to hold is the likely cause. The memory taken by the failed load is freed once the load fails, so the app can keep running.
+The use case builds the `Result` with `runCatching` and `fold`. `runCatching` also catches `CancellationException`, so `fold` always rethrows it: a cancelled load (ViewModel cleared) never turns into a failure or an error message. A `CsvError` is passed on as is, and any other exception is wrapped in `CsvError.Generic`, so the UI always gets a known kind and the app never crashes on an unexpected error. `runCatching` also catches JVM errors, so an `OutOfMemoryError` becomes `CsvError.FileTooLarge` instead of a crash. Loading the file is by far the largest use of memory in the app, so a file too large to hold is the likely cause. The memory taken by the failed load is freed once the load fails, so the app can keep running.
 
 ### UI: MVVM with unidirectional data flow, no reducers
 
@@ -106,19 +106,16 @@ The use case builds the `Result` with `runCatching` and `fold`. `runCatching` al
  CsvViewerScreen --onEvent(CsvEvent.Retry)--> CsvViewerViewModel --> LoadCsvTableUseCase
        ^                                          |
        +---- state: StateFlow<CsvUiState> --------+
-       +---- effects: Flow<CsvEffect> (Channel) --+--> SnackbarHostState (app Scaffold)
 ```
 
-- `CsvUiState`: `Loading`, `Loaded(table)`, `NoRows`, `Failed(error, canRetry)`. The error message and the Retry button are part of the state, so they survive any configuration change (the Activity, and with it the `SnackbarHostState`, is recreated, but the ViewModel is not).
-- `canRetry` is true only for network-related and authentication failures (`Network`, `Http` 401/403/408/429/5xx) and false for everything else (`Malformed`, `EmptyFile`, `FileTooLarge`, other 4xx, `Unknown`). A single property `CsvError.canRetry` holds this rule.
-- `CsvEvent`: `Retry`. The ViewModel ignores it unless the state is `Failed`, so a second download can never start while one is running.
-- `CsvEffect`: `ShowError(kind)` (short, no action: it announces the failure, while the screen holds the message and the Retry button).
-- The ViewModel loads in `init`, so a configuration change doesn't reload. Effects go through a `Channel`, so a snackbar is delivered once and not replayed.
-- The app is locked to portrait (`android:screenOrientation="portrait"`). Since Android 16 (we target 37) the platform ignores this on large screens (smallest width ≥ 600dp), so the layout must still work in landscape there. Other configuration changes (dark mode, locale, font size) can happen on any device, which is why the state-based error screen is needed anyway.
-- The screen collects state with `collectAsStateWithLifecycle` and effects in a `LaunchedEffect`. A stateless `CsvViewerContent(state)` holds all rendering so UI tests don't need Hilt.
+- `CsvUiState(isLoading, table: CsvTable?, error: CsvError?)` with `canRetry` read from the error. One data class instead of exclusive states, so content and an error can be shown together (e.g. a later refresh that fails keeps the rows on screen). The screen renders each part on its own: the list when the table has rows (even with an error), the loading indicator while loading with no rows to show, the empty state (an icon with "Nothing to show") when not loading and there are no rows to show, and the error snackbar whenever `error` is set. The error is part of the state, so it survives any configuration change (the Activity is recreated, but the ViewModel is not). The snackbar stays on screen (`SnackbarDuration.Indefinite`) with the error's message and, when `canRetry`, a Retry action. It is driven by the state, not by a one-off effect: a `LaunchedEffect(error)` shows it while `error` is set, so it comes back after a configuration change and disappears when the error is cleared. The `SnackbarHost` sits in the screen's own `Scaffold`, so the screen and its UI tests don't depend on the app.
+- `canRetry` is true only for failures a second try can fix (`Network`, `Http` 408/429/5xx) and false for everything else, including 401/403 since the app sends no credentials (`Storage`, `Malformed`, `EmptyFile`, `FileTooLarge`, other 4xx, `Generic`). A single property `CsvError.canRetry` holds this rule.
+- `CsvEvent`: `Retry`. The ViewModel ignores it unless `canRetry` (an error that retrying can fix). A new load clears the error, so a second download can never start while one is running. A new load keeps the table already shown and clears the error.
+- The ViewModel loads in `init`, so a configuration change doesn't reload.
+- The app is locked to portrait (`android:screenOrientation="portrait"`). Since Android 16 (we target 37) the platform ignores this on large screens (smallest width ≥ 600dp), so the layout must still work in landscape there. Other configuration changes (dark mode, locale, font size) can happen on any device, which is why the error is kept in the state.
+- The screen collects state with `collectAsStateWithLifecycle`. A stateless `CsvViewerContent(state)` holds all rendering so UI tests don't need Hilt.
 - `LazyColumn(items(count = table.rowCount, key = { index -> index }, contentType = { "row" }))`, and each item reads its cells with `remember(table, index) { table.row(index) }`, so only the visible rows are converted, once each. The row index is the key because it's unique and stable, while row content can repeat.
 - Values are formatted in the card composable: the date with `DateTimeFormatter.ofLocalizedDate(MEDIUM)`, remembered per locale, and a time, when there is one, with `DateTimeFormatter.ofPattern("HH:mm")`, joined as `<date>, <time>`, so times are always 24-hour (midnight included). A value with an offset is first converted with `OffsetDateTime.of(date, time, offset).atZoneSameInstant(ZoneId.systemDefault())`. Integers are shown with `toString()` (no grouping, so IDs and years read correctly).
-- The global snackbar: `:app`'s `Scaffold` owns the `SnackbarHostState` and passes it to the screen.
 - Compose strong skipping (on by default with the Kotlin 2.x Compose compiler) means we don't need immutable collection libraries. The UI models are `@Immutable` data classes.
 
 ### Dependency injection
@@ -136,12 +133,12 @@ All Hilt modules live in `:app`, the only module that sees both `:core:data` and
 |---|---|---|
 | `CsvParser` | JVM unit | every scenario in `csv-parsing` (including a Windows-1252 file read through the fallback), plus adversarial input: unclosed quote, quote in an unquoted field, text after a closing quote, CR only, mixed line endings, BOM, blank lines (single- and multi-column), a `""`-only line, header only, empty, Unicode/emoji, very long field, 100k generated rows |
 | `RawCsv.toCsvTable()` and `CsvTable.row()` | JVM unit | every scenario in `column-type-inference`, plus Long min/max edges, whitespace, leap day, date-times with an offset (`Z`, positive, negative), an invalid offset |
-| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection gives a network error, cancellation while a read is blocked stops at once |
+| `CsvDownloader` | JVM unit (MockWebServer, temp dir) | success, replacement, HTTP error, dropped connection gives a network error, cancellation while a read is blocked stops at once, a file that can't be created and a failed write give a storage error |
 | Repository + use case | JVM integration (MockWebServer) | sample file bytes → typed `CsvTable` end to end |
 | Parser + type inference on a device | instrumented (emulator or phone) | a generated 100k-row file parsed and typed within a time limit, to check memory and speed where the heap is smaller than on the JVM |
-| `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Unknown`, cancellation is rethrown and not turned into a failure |
-| `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | Loading → Loaded/NoRows/Failed, `canRetry` per error kind, error effect, Retry from `Failed`, Retry ignored while loading |
-| `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, no-rows message, error message with and without Retry button |
+| `LoadCsvTableUseCase` | JVM unit (fake repository) | success, `CsvError` passed on, `OutOfMemoryError` → `FileTooLarge`, other exception → `Generic`, cancellation is rethrown and not turned into a failure |
+| `CsvViewerViewModel` | JVM unit (coroutines-test, fake repository) | starts loading; rows, no rows, and failure (with and without Retry) states; Retry after a failure; Retry ignored while loading |
+| `CsvViewerContent` | instrumented Compose UI | loading indicator, cards with labels and formatted values, `-` for empty, 24-hour times, a date-time with an offset converted to the device time zone, unnamed column label, empty state for no rows and for a failure, error snackbar with and without Retry |
 
 ## Risks / Trade-offs
 
@@ -149,7 +146,6 @@ All Hilt modules live in `:app`, the only module that sees both `:core:data` and
 
 ## Open Questions
 
-- Snackbar for errors: keep the `ShowError` effect (a short snackbar that repeats the error already shown in the `Failed` state), or drop the snackbar and rely on the `Failed` state alone. Also reword "error screen" in the specs to "the error state of the screen", since it is not a separate screen. To be settled with the user before task 6.1. The specs and tasks keep `ShowError` until then.
 - [A validation file uses `;` or dates in another format] → Its columns are shown as TEXT, so data still displays but less precisely. The decision is written down in the specs and can be extended in one place (multi-format date detection is a listed follow-up).
 - [A validation file is a Windows-1252 Excel export] → It's read again as Windows-1252 and shown correctly. A file in another code page loads with garbled non-ASCII letters; the README says so.
 - [Five modules for one screen] → Each module has a distinct responsibility, and the build-logic plugins keep each module's build file to a few lines.

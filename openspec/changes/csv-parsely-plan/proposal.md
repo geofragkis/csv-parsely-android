@@ -12,7 +12,7 @@ The app must download a CSV file from a remote URL and show its contents, with e
 - Add a hand-written CSV parser (no third-party CSV library) that streams the file row by row and handles quoted fields, escaped quotes, line breaks inside quotes, CRLF/LF/CR line endings, a UTF-8 BOM and a missing final newline. Files are read as UTF-8; a file that is not valid UTF-8 is read again as Windows-1252 (the default of Excel on Windows), so the encoding never stops a file from loading.
 - Infer each column's type (TEXT, INTEGER or DATE) from its content and convert every cell to that type.
 - Keep rows whose field count differs from the header: pad short rows and keep extra fields as unnamed columns.
-- Show the rows in a single screen: a `LazyColumn` of non-clickable cards, a loading indicator, and a snackbar for errors (with a Retry action).
+- Show the rows in a single screen: a `LazyColumn` of non-clickable cards, a loading indicator, an empty state ("Nothing to show" with an icon) when there is nothing to show, and errors in a snackbar that stays on screen (with Retry when retrying can help).
 - Add unit tests (parser, type inference, download, ViewModel), a JVM integration test from HTTP to typed table, and Compose UI tests, written together with the code they cover.
 
 ## Capabilities
