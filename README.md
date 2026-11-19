@@ -1,5 +1,7 @@
 # CsvParsely
 
+A take-home assignment for Rabobank.
+
 An Android app that downloads a CSV file, converts every value to a string, an integer or a date, and shows the rows as
 cards. The parser is hand-written (no CSV library), and the column types are decided from the content, so the app works
 on any well-formed comma-separated file, not only on the sample.
