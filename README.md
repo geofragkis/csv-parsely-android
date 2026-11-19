@@ -139,7 +139,7 @@ fails, so the app keeps running.
 
 ## Tests
 
-Tests cover crashes, wrong data and the scenarios in the specs; a case the app can't reach has no test.
+Tests cover crashes, wrong data and the app's required behaviour; a case the app can't reach has no test.
 
 - **Unit tests** for the parser, type inference, download (with MockWebServer), use case, errors and ViewModel.
 - **Integration test** for the sample file from HTTP to the typed table.
