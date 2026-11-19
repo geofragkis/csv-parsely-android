@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.feature.csv_viewer
+package gio.frag.csvparsely.feature.csv_viewer.model
 
 /**
  * Created by Giorgos Fragkis on 19-11-2026

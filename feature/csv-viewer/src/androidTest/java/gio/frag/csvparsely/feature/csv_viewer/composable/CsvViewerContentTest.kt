@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.feature.csv_viewer
+package gio.frag.csvparsely.feature.csv_viewer.composable
 
 import android.content.res.Configuration
 import androidx.compose.runtime.CompositionLocalProvider
@@ -20,6 +20,8 @@ import gio.frag.csvparsely.core.design_system.theme.CsvParselyTheme
 import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.inference.toCsvTable
 import gio.frag.csvparsely.core.domain.model.RawCsv
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvEvent
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvUiState
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule

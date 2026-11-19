@@ -4,6 +4,8 @@ import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.model.RawCsv
 import gio.frag.csvparsely.core.domain.repository.CsvRepository
 import gio.frag.csvparsely.core.domain.usecase.LoadCsvTableUseCase
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvEvent
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvUiState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

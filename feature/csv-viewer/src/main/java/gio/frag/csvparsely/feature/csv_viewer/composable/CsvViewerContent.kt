@@ -1,4 +1,4 @@
-package gio.frag.csvparsely.feature.csv_viewer
+package gio.frag.csvparsely.feature.csv_viewer.composable
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +37,9 @@ import gio.frag.csvparsely.core.domain.error.CsvError
 import gio.frag.csvparsely.core.domain.inference.toCsvTable
 import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.model.RawCsv
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvEvent
+import gio.frag.csvparsely.feature.csv_viewer.model.CsvUiState
+import gio.frag.csvparsely.feature.csv_viewer.R
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
