@@ -243,3 +243,32 @@ private fun CsvViewerContentEmptyPreview() {
         )
     }
 }
+
+// The snackbar is shown from a LaunchedEffect, so it appears in the preview's interactive mode
+@Preview
+@Composable
+private fun CsvViewerContentErrorWithRetryPreview() {
+    CsvParselyTheme {
+        CsvViewerContent(
+            state = CsvUiState(
+                isLoading = false,
+                error = CsvError.Network(cause = null),
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun CsvViewerContentErrorWithoutRetryPreview() {
+    CsvParselyTheme {
+        CsvViewerContent(
+            state = CsvUiState(
+                isLoading = false,
+                error = CsvError.Malformed(line = 3),
+            ),
+            onEvent = {},
+        )
+    }
+}
