@@ -53,22 +53,22 @@ internal fun CsvViewerContent(
     onEvent: (CsvEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val table = state.table
-    val error = state.error
     val snackbarHostState = remember { SnackbarHostState() }
-    val errorMessage = error?.snackbarMessage()
+    val errorMessage = state.error?.snackbarMessage()
     val retryLabel = stringResource(R.string.feature_csv_viewer_retry)
 
-    // Shown while the error is set, so it comes back after a configuration change and goes when the error is cleared
-    LaunchedEffect(error) {
+    // Shown while the error is set
+    LaunchedEffect(state.error) {
         if (errorMessage == null) return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
             message = errorMessage,
             actionLabel = if (state.canRetry) retryLabel else null,
             duration = SnackbarDuration.Indefinite,
         )
-        if (result == SnackbarResult.ActionPerformed) {
-            onEvent(CsvEvent.Retry)
+        when (result) {
+            SnackbarResult.ActionPerformed -> onEvent(CsvEvent.Retry)
+            // Nothing to do: the snackbar goes away only when the error is cleared
+            SnackbarResult.Dismissed -> Unit
         }
     }
 
@@ -81,8 +81,8 @@ internal fun CsvViewerContent(
             .fillMaxSize()
             .padding(innerPadding)
         when {
-            table != null && table.rowCount > 0 -> CsvRowList(
-                table = table,
+            state.table != null && state.table.rowCount > 0 -> CsvRowList(
+                table = state.table,
                 modifier = contentModifier,
             )
 
@@ -165,7 +165,10 @@ private fun CsvRowList(
     val labels = remember(table) {
         table.columns.mapIndexed { index, column ->
             column.name.ifBlank {
-                resources.getString(R.string.feature_csv_viewer_unnamed_column, index + 1)
+                resources.getString(
+                    R.string.feature_csv_viewer_unnamed_column,
+                    index + 1
+                )
             }
         }
     }
