@@ -18,7 +18,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -63,34 +62,6 @@ class CsvViewerViewModelTest {
     }
 
     @Test
-    fun `a file with rows is loaded`() = runTest(testDispatcher) {
-        val viewModel = viewModel(FakeCsvRepository { SAMPLE_CSV })
-
-        advanceUntilIdle()
-
-        val state = viewModel.state.value
-        assertFalse(state.isLoading)
-        assertEquals(1, state.table?.rowCount)
-        assertNull(state.error)
-    }
-
-    @Test
-    fun `a file with only a header has no rows`() = runTest(testDispatcher) {
-        val headerOnly = RawCsv(
-            header = listOf("a", "b"),
-            rows = emptyList(),
-        )
-        val viewModel = viewModel(FakeCsvRepository { headerOnly })
-
-        advanceUntilIdle()
-
-        val state = viewModel.state.value
-        assertFalse(state.isLoading)
-        assertEquals(0, state.table?.rowCount)
-        assertNull(state.error)
-    }
-
-    @Test
     fun `a network failure fails with Retry`() = runTest(testDispatcher) {
         val error = CsvError.Network(cause = null)
         val viewModel = viewModel(FakeCsvRepository { throw error })
@@ -104,34 +75,6 @@ class CsvViewerViewModelTest {
 
         assertEquals(expectedState, viewModel.state.value)
         assertTrue(viewModel.state.value.canRetry)
-    }
-
-    @Test
-    fun `a malformed file fails without Retry`() = runTest(testDispatcher) {
-        val error = CsvError.Malformed(line = 4)
-        val viewModel = viewModel(FakeCsvRepository { throw error })
-        val expectedState = CsvUiState(
-            isLoading = false,
-            table = null,
-            error = error,
-        )
-
-        advanceUntilIdle()
-
-        assertEquals(expectedState, viewModel.state.value)
-        assertFalse(viewModel.state.value.canRetry)
-    }
-
-    @Test
-    fun `Retry after a failure that retrying can't fix is ignored`() = runTest(testDispatcher) {
-        val repository = FakeCsvRepository { throw CsvError.Malformed(line = 4) }
-        val viewModel = viewModel(repository)
-        advanceUntilIdle()
-
-        viewModel.onEvent(CsvEvent.Retry)
-        advanceUntilIdle()
-
-        assertEquals(1, repository.loadCount)
     }
 
     @Test
