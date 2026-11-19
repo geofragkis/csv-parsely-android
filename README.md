@@ -137,6 +137,15 @@ fails, so the app keeps running.
 - **Encodings**: only UTF-8 and Windows-1252 are read correctly. A file in another encoding still loads, but its
   non-ASCII letters show garbled.
 
+## Tests
+
+Tests cover crashes, wrong data and the scenarios in the specs; a case the app can't reach has no test.
+
+- **Unit tests** for the parser, type inference, download (with MockWebServer), use case, errors and ViewModel.
+- **Integration test** for the sample file from HTTP to the typed table.
+- **UI tests** for the screen: cards and value formatting, the empty state and the error snackbar.
+- **Device test** for parsing and typing 100,000 rows within a time limit.
+
 ## Build and test
 
 Open the project in Android Studio, or use the Gradle wrapper (JDK 17 or newer).
@@ -145,18 +154,16 @@ Open the project in Android Studio, or use the Gradle wrapper (JDK 17 or newer).
 # Build and install the debug app on a connected device or emulator
 ./gradlew installDebug
 
-# JVM unit tests of all modules: parser, type inference, download (MockWebServer), use case, ViewModel,
-# and an integration test from HTTP to the typed table
+# JVM unit and integration tests of all modules
 ./gradlew test
 
-# Instrumented tests, on a connected device or emulator: Compose UI tests of the screen, and a 100,000-row
-# parse and type run on the device
+# Instrumented tests, on a connected device or emulator
 ./gradlew connectedDebugAndroidTest
 ```
 
 ## How AI was used
 
-Claude Code assisted me while building this app; it was not vibe coded. I made every decision, reviewed each step and changed the code myself whenever I thought it was needed:
+I used Claude Code as my coding agent: it wrote code under my direction, and nothing went in without my review. I made every decision, reviewed each step and changed the code myself whenever I thought it was needed:
 the work was split into small tasks, each one in its own pull request that I reviewed before merging. The planning was
 done with OpenSpec, a tool for writing down what to build (proposal, design, specs and tasks) before writing the code.
 I used it mainly to try out and practise AI-assisted spec-driven development on a real, small project. The proposal, design (with the alternatives considered), specs and task list are in `openspec/`.
