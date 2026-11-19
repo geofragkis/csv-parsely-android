@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -115,11 +116,17 @@ private fun CsvRowList(
     table: CsvTable,
     modifier: Modifier = Modifier,
 ) {
-    val labels = table.columns.mapIndexed { index, column ->
-        column.name.ifBlank { stringResource(R.string.feature_csv_viewer_unnamed_column, index + 1) }
+    val resources = LocalResources.current
+    val labels = remember(table) {
+        table.columns.mapIndexed { index, column ->
+            column.name.ifBlank {
+                resources.getString(R.string.feature_csv_viewer_unnamed_column, index + 1)
+            }
+        }
     }
     val locale = LocalConfiguration.current.locales[0]
-    val dateFormatter = remember(locale) {
+
+    val dateFormatter = remember {
         DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
     }
 

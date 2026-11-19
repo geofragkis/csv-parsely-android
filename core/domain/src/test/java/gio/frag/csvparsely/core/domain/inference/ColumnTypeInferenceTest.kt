@@ -2,6 +2,7 @@ package gio.frag.csvparsely.core.domain.inference
 
 import gio.frag.csvparsely.core.domain.model.CellValue
 import gio.frag.csvparsely.core.domain.model.CellValue.Empty
+import gio.frag.csvparsely.core.domain.model.CellValue.Image
 import gio.frag.csvparsely.core.domain.model.CellValue.Integer
 import gio.frag.csvparsely.core.domain.model.CellValue.Text
 import gio.frag.csvparsely.core.domain.model.Column
@@ -428,6 +429,55 @@ class ColumnTypeInferenceTest {
         val table = singleColumnCSVTable(" a ", "b ")
         val expectedType = ColumnType.TEXT
         val expectedResult = listOf(Text(" a "), Text("b "))
+
+        assertEquals(expectedType, table.singleColumnTableType())
+        assertEquals(expectedResult, table.cells())
+    }
+
+    // Image values
+
+    @Test
+    fun `sample avatar column is text with image values`() {
+        val avatar = "https://api.multiavatar.com/2cdf5db9b4dee297b7.png"
+        val table = singleColumnCSVTable(avatar)
+        val expectedType = ColumnType.TEXT
+        val expectedResult = listOf(Image(avatar))
+
+        assertEquals(expectedType, table.singleColumnTableType())
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
+    fun `image URL with a query and an upper-case extension is an image`() {
+        val url = "https://example.com/photo.JPG?size=2"
+        val table = singleColumnCSVTable(url)
+        val expectedResult = listOf(Image(url))
+
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
+    fun `URL that is not an image stays text`() {
+        val url = "https://example.com/report.pdf"
+        val table = singleColumnCSVTable(url)
+        val expectedResult = listOf(Text(url))
+
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
+    fun `text that is not a valid URL stays text`() {
+        val table = singleColumnCSVTable("my photo.png")
+        val expectedResult = listOf(Text("my photo.png"))
+
+        assertEquals(expectedResult, table.cells())
+    }
+
+    @Test
+    fun `column mixing image URLs and other text is text`() {
+        val table = singleColumnCSVTable("https://example.com/a.png", "Theo")
+        val expectedType = ColumnType.TEXT
+        val expectedResult = listOf(Image("https://example.com/a.png"), Text("Theo"))
 
         assertEquals(expectedType, table.singleColumnTableType())
         assertEquals(expectedResult, table.cells())

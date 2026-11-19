@@ -5,6 +5,8 @@ import gio.frag.csvparsely.core.domain.model.Column
 import gio.frag.csvparsely.core.domain.model.ColumnType
 import gio.frag.csvparsely.core.domain.model.CsvTable
 import gio.frag.csvparsely.core.domain.model.RawCsv
+import java.net.URI
+import java.net.URISyntaxException
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -18,6 +20,9 @@ private val INTEGER_PATTERN = Regex("[+-]?(0|[1-9][0-9]*)")
  * correctly: year 0000 would show as year 1, and a year such as +999999999 fails when it is moved to another time zone.
  */
 private val SUPPORTED_YEARS = 1..9999
+
+private val IMAGE_SCHEMES = setOf("http", "https")
+private val IMAGE_EXTENSIONS = listOf(".png", ".jpg", ".jpeg", ".gif", ".webp")
 
 /**
  * Created by Giorgos Fragkis on 16-11-2026
@@ -88,21 +93,39 @@ private fun columnType(values: List<String>): ColumnType {
 }
 
 /**
- * Converts one cell to the type of its column, decided by [toCsvTable]. A TEXT value is kept exactly as it is, and a
- * blank value in an INTEGER or DATE column becomes [CellValue.Empty]. Internal, so only [CsvTable] uses it.
+ * Converts one cell to the type of its column, decided by [toCsvTable]. A TEXT value is kept exactly as it is, as an
+ * [CellValue.Image] when it is an image URL, and a blank value in an INTEGER or DATE column becomes [CellValue.Empty].
+ * Internal, so only [CsvTable] uses it.
  *
- * For example: `" 30 "` in an INTEGER column returns `Integer(30)`, `" "` in an INTEGER column returns `Empty`, and
- * `" a "` in a TEXT column returns `Text(" a ")`.
+ * For example: `" 30 "` in an INTEGER column returns `Integer(30)`, `" "` in an INTEGER column returns `Empty`,
+ * `" a "` in a TEXT column returns `Text(" a ")`, and `"https://example.com/a.png"` returns `Image(...)`.
  */
 internal fun String.toCellValue(type: ColumnType): CellValue {
     val trimmed = trim()
     if (type != ColumnType.TEXT && trimmed.isEmpty()) return CellValue.Empty
 
     return when (type) {
-        ColumnType.TEXT -> CellValue.Text(this)
+        ColumnType.TEXT -> if (isImageUrl()) CellValue.Image(this) else CellValue.Text(this)
         ColumnType.INTEGER -> CellValue.Integer(checkNotNull(trimmed.toIntegerOrNull()))
         ColumnType.DATE -> checkNotNull(trimmed.toDateOrNull())
     }
+}
+
+/**
+ * Whether this is an `http` or `https` URL whose path ends in an image extension, ignoring case. Only the path is
+ * checked, so `https://example.com/photo.png?size=2` is an image and `https://example.com/report.pdf` is not.
+ */
+private fun String.isImageUrl(): Boolean {
+    val uri = runCatching { URI(this) }
+        .getOrElse { error ->
+            // Only a syntax error means "not a URL"; anything else is passed on
+            if (error !is URISyntaxException) throw error
+            null
+        }
+        ?: return false
+    val path = uri.path ?: return false
+    return uri.scheme?.lowercase() in IMAGE_SCHEMES &&
+        IMAGE_EXTENSIONS.any { extension -> path.endsWith(extension, ignoreCase = true) }
 }
 
 /**

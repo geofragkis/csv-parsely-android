@@ -45,7 +45,7 @@ internal fun CsvRowCard(
     dateFormatter: DateTimeFormatter,
     modifier: Modifier = Modifier,
 ) {
-    val (imageIndexes, textIndexes) = cells.indices.partition { index -> cells[index].isImage() }
+    val labelledCells: List<Pair<String, CellValue>> = labels.zip(cells)
 
     ElevatedCard(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -53,13 +53,15 @@ internal fun CsvRowCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (imageIndexes.isNotEmpty()) {
+            if (cells.any { it is CellValue.Image }) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    imageIndexes.forEach { index ->
-                        CellImage(
-                            url = (cells[index] as CellValue.Text).value,
-                            label = labels[index],
-                        )
+                    labelledCells.forEach { (label, cell) ->
+                        if (cell is CellValue.Image) {
+                            CellImage(
+                                url = cell.url,
+                                label = label,
+                            )
+                        }
                     }
                 }
             }
@@ -67,11 +69,13 @@ internal fun CsvRowCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                textIndexes.forEach { index ->
-                    CellLine(
-                        label = labels[index],
-                        value = cells[index].formatted(dateFormatter),
-                    )
+                labelledCells.forEach { (label, cell) ->
+                    if (cell !is CellValue.Image) {
+                        CellLine(
+                            label = label,
+                            value = cell.formatted(dateFormatter),
+                        )
+                    }
                 }
             }
         }
@@ -116,13 +120,12 @@ private fun CellLine(
     }
 }
 
-private fun CellValue.isImage(): Boolean =
-    this is CellValue.Text && isImageUrl(value)
-
 /** The value as shown on the card, for example `5`, `Jan 2, 1978, 00:00` or `-` for an empty value. */
 private fun CellValue.formatted(dateFormatter: DateTimeFormatter): String =
     when (this) {
         is CellValue.Text -> value.ifBlank { EMPTY_VALUE }
+        // Images are shown on the left of the card, never as a line
+        is CellValue.Image -> url
         is CellValue.Integer -> value.toString()
         is CellValue.Date -> formatted(dateFormatter)
         CellValue.Empty -> EMPTY_VALUE
