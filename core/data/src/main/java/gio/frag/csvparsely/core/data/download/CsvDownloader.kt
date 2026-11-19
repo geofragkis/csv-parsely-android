@@ -63,7 +63,7 @@ class CsvDownloader(
             val fileOutput = runCatching { FileOutputStream(file) }
                 .getOrElse {
                     // Can't create the file: a problem on the phone, not the network, so retrying won't help
-                    throw CsvError.Storage(it)
+                    throw storageError(it)
                 }
 
             fileOutput.use { output ->
@@ -94,7 +94,7 @@ class CsvDownloader(
             if (read == -1) break
 
             runCatching { output.write(buffer, 0, read) }
-                .getOrElse { throw CsvError.Storage(it) }
+                .getOrElse { throw storageError(it) }
         }
     }
 
@@ -107,6 +107,13 @@ class CsvDownloader(
         ensureActive()
         return if (error is IOException) CsvError.Network(error) else error
     }
+
+    /**
+     * Maps a failed file creation or write: an [IOException] becomes [CsvError.Storage], anything else (such as running
+     * out of memory) is passed on unchanged for the use case to map.
+     */
+    private fun storageError(error: Throwable): Throwable =
+        if (error is IOException) CsvError.Storage(error) else error
 
     private companion object {
         const val FILE_NAME = "download.csv"

@@ -74,7 +74,10 @@ class CsvViewerViewModelTest {
 
     @Test
     fun `a file with only a header has no rows`() = runTest(testDispatcher) {
-        val headerOnly = RawCsv(header = listOf("a", "b"), rows = emptyList())
+        val headerOnly = RawCsv(
+            header = listOf("a", "b"),
+            rows = emptyList(),
+        )
         val viewModel = viewModel(FakeCsvRepository { headerOnly })
 
         advanceUntilIdle()
@@ -115,6 +118,18 @@ class CsvViewerViewModelTest {
 
         assertEquals(expectedState, viewModel.state.value)
         assertFalse(viewModel.state.value.canRetry)
+    }
+
+    @Test
+    fun `Retry after a failure that retrying can't fix is ignored`() = runTest(testDispatcher) {
+        val repository = FakeCsvRepository { throw CsvError.Malformed(line = 4) }
+        val viewModel = viewModel(repository)
+        advanceUntilIdle()
+
+        viewModel.onEvent(CsvEvent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(1, repository.loadCount)
     }
 
     @Test

@@ -33,10 +33,10 @@ class CsvViewerViewModel @Inject constructor(
 
     fun onEvent(event: CsvEvent) {
         when (event) {
-            // Only after a failure and while nothing is loading, so a second download never starts while one is running
+            // Only after a failure that retrying can fix. A new load clears the error, so a second download never
+            // starts while one is running
             CsvEvent.Retry -> {
-                val state = _state.value
-                if (state.error != null && !state.isLoading) {
+                if (_state.value.canRetry) {
                     loadCsv()
                 }
             }
@@ -71,8 +71,8 @@ class CsvViewerViewModel @Inject constructor(
             onFailure = { error ->
                 copy(
                     isLoading = false,
-                    // The use case only fails with a CsvError
-                    error = error as CsvError,
+                    // The use case only fails with a CsvError; anything else still shows the generic message
+                    error = error as? CsvError ?: CsvError.Generic(error),
                 )
             },
         )
