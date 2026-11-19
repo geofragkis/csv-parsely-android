@@ -14,8 +14,6 @@ class CsvErrorTest {
     fun `network failures and some server answers can be retried`() {
         val errors = listOf(
             CsvError.Network(cause = null),
-            CsvError.Http(401),
-            CsvError.Http(403),
             CsvError.Http(408),
             CsvError.Http(429),
             CsvError.Http(500),
@@ -32,6 +30,8 @@ class CsvErrorTest {
     fun `problems with the file and unexpected errors can't be retried`() {
         val errors = listOf(
             CsvError.Http(400),
+            CsvError.Http(401),
+            CsvError.Http(403),
             CsvError.Http(404),
             CsvError.Http(499),
             CsvError.Storage(cause = IOException()),

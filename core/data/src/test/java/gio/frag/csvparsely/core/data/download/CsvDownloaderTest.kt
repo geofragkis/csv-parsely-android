@@ -15,7 +15,10 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
+import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -129,6 +132,23 @@ class CsvDownloaderTest {
         val stopTime = measureTime { download.cancelAndJoin() }
 
         assertTrue(stopTime < 5.seconds, "took $stopTime")
+    }
+
+    @Test
+    fun `a failed write to the file fails with a storage error`() = runTest {
+        // Stands in for a full disk: every write fails
+        val fullDisk = object : OutputStream() {
+            override fun write(byte: Int) = throw IOException("No space left on device")
+        }
+
+        assertFailsWith<CsvError.Storage> {
+            with(downloader) {
+                copy(
+                    input = ByteArrayInputStream(SAMPLE_CSV.toByteArray()),
+                    output = fullDisk,
+                )
+            }
+        }
     }
 
     @Test

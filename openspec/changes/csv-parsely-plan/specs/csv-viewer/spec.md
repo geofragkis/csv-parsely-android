@@ -85,7 +85,7 @@ The system SHALL show, when loading fails, a snackbar with a message for the fai
 - **THEN** the snackbar with its message and, if offered, its Retry action is still shown
 
 ### Requirement: Retry from the error snackbar
-The system SHALL offer a Retry action on the error snackbar only for network-related and authentication failures: no connection, HTTP 401, 403, 408, 429 and 5xx. All other failures (storage, malformed, empty, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
+The system SHALL offer a Retry action on the error snackbar only for failures that a second try can fix: no connection, HTTP 408, 429 and 5xx. HTTP 401 and 403 SHALL NOT offer Retry, since the app sends no credentials and the answer would not change. All other failures (storage, malformed, empty, file too large, other HTTP 4xx, unexpected errors) SHALL NOT offer Retry. Retry SHALL start the download again and SHALL NOT be available while a download is in progress.
 
 #### Scenario: Retry succeeds
 - **WHEN** the user presses Retry and the download now succeeds
@@ -105,7 +105,7 @@ The system SHALL offer a Retry action on the error snackbar only for network-rel
 
 #### Scenario: Access denied
 - **WHEN** loading fails with HTTP 401 or 403
-- **THEN** the snackbar shows a server error with that code and offers Retry
+- **THEN** the snackbar shows a server error with that code and offers no Retry
 
 #### Scenario: Not found
 - **WHEN** loading fails with HTTP 404

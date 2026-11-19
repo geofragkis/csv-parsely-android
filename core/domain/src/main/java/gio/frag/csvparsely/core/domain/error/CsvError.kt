@@ -10,7 +10,8 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
 
     /**
      * Whether loading again can help: true for network failures and for server answers that can change on a second
-     * try (401, 403, 408, 429 and 5xx), false for problems with the file itself or anything unexpected.
+     * try (408, 429 and 5xx), false for problems with the file itself or anything unexpected. 401 and 403 are not
+     * retried: the app sends no credentials, so the answer would be the same.
      */
     val canRetry: Boolean
         get() = when (this) {
@@ -49,6 +50,6 @@ sealed class CsvError(cause: Throwable? = null) : Exception(cause) {
     ) : CsvError(cause)
 
     private companion object {
-        val RETRYABLE_HTTP_CODES = setOf(401, 403, 408, 429)
+        val RETRYABLE_HTTP_CODES = setOf(408, 429)
     }
 }

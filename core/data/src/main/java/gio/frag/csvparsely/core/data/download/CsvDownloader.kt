@@ -66,23 +66,25 @@ class CsvDownloader(
                     throw storageError(it)
                 }
 
-            fileOutput.use { output ->
-                copy(
-                    input = response.body.byteStream(),
-                    output = output,
-                )
-            }
+            // Closing can also fail on a full disk; read errors are already CsvErrors and pass through unchanged
+            runCatching {
+                fileOutput.use { output ->
+                    copy(
+                        input = response.body.byteStream(),
+                        output = output,
+                    )
+                }
+            }.getOrElse { throw storageError(it) }
 
             return file
         }
     }
 
     /**
-     * Copies [input] into [output] in chunks of 8 KB, so the body is never held in memory as a whole. Reads and writes
-     * are separate steps, so a dropped connection (network error) is told apart from a failed write to the phone's
-     * storage, such as a full disk (storage error, since retrying won't help).
+     * Copies [input] into [output], reading and writing separately: a failed read is a network error, a failed write a
+     * storage error. Internal so the tests can check that split.
      */
-    private fun CoroutineScope.copy(
+    internal fun CoroutineScope.copy(
         input: InputStream,
         output: OutputStream,
     ) {
